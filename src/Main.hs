@@ -13,7 +13,7 @@ main = do
                     if day == 1 then Day1.part1
                     else putStrLn "I haven't solved that yet (or it doesn't exist)"
                 else if part == "2" then
-                    if day == 2 then Day1.part2
+                    if day == 1 then Day1.part2
                     else putStrLn "I haven't solved that yet (or it doesn't exist)"
                 else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
     else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
