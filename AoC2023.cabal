@@ -1,0 +1,36 @@
+cabal-version:      2.4
+name:               AoC2023
+version:            0.1.0.0
+
+-- A short (one-line) description of the package.
+-- synopsis:
+
+-- A longer description of the package.
+-- description:
+
+-- A URL where users can report bugs.
+-- bug-reports:
+
+-- The license under which the package is released.
+-- license:
+author:             BenBean18
+maintainer:         beakerthespeaker@gmail.com
+
+-- A copyright notice.
+-- copyright:
+-- category:
+extra-source-files: CHANGELOG.md
+
+executable AoC2023
+    main-is:          Main.hs
+
+    ghc-options: -optc-O3
+
+    -- Modules included in this executable, other than Main.
+    other-modules: Utilities, Day1
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:    base ^>=4.16.4.0, text ^>=1.2.5.0, regex-pcre-builtin, regex-base, containers, criterion, split, mod, ghc, PSQueue, multiset
+    hs-source-dirs:   src
+    default-language: Haskell2010
