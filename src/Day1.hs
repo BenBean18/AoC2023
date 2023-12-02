@@ -29,7 +29,7 @@ replaceGood a b s = unpack (replace (pack a) (pack b) (pack s))
 
 -- Replace "one" with "1", "two" with "2", etc.
 replaceWords :: String -> String
-replaceWords s = replaceGood "nine" "9" (replaceGood "eight" "8" (replaceGood "seven" "7" (replaceGood "six" "6" (replaceGood "five" "5" (replaceGood "four" "4" (replaceGood "three" "3" (replaceGood "two" "2" (replaceGood "one" "1" s))))))))
+replaceWords s = foldl (\s (a,b) -> replaceGood a b s) s [("one","1"),("two","2"),("three","3"),("four","4"),("five","5"),("six","6"),("seven","7"),("eight","8"),("nine","9")]
 
 -- Iterates through the string from the left, building up a substring.
 -- If the substring contains a number, the function stops and returns the replaced number plus the rest of the string.
