@@ -8,6 +8,9 @@ import Data.Text (pack, unpack, replace, isInfixOf)
 import Text.Regex.Base
 import Text.Regex.PCRE
 
+import Criterion.Main
+import System.Environment
+
 data Game = Game { gameId :: Int, maxRed :: Int, maxGreen :: Int, maxBlue :: Int }
 
 parseSubset :: String -> [Int]
@@ -44,17 +47,32 @@ isValid Game { maxRed = r, maxGreen = g, maxBlue = b } =
     r <= 12 && g <= 13 && b <= 14
 
 -- Part 1
-part1 = do
-    lines <- getLines "day2/input.txt"
-    let games = map parseGame lines
-    print $ sum $ (map gameId (filter isValid games))
+part1' lines = 
+    let games = map parseGame lines in
+        print $ sum $ (map gameId (filter isValid games))
 
 power :: String -> Int
 power s = 
     let ourSubsets = subsets s in
         findMaxBlue ourSubsets * findMaxRed ourSubsets * findMaxGreen ourSubsets
 
+part1 = do
+    lines <- getLines "day2/input.txt"
+    part1' lines
+
 -- Part 2
+part2' lines = print $ sum $ (map power lines)
+
 part2 = do
     lines <- getLines "day2/input.txt"
-    print $ sum $ (map power lines)
+    part2' lines
+
+time lines =
+    withArgs ["--output", "day2.html"] $ defaultMain [
+        bench "part1" $ nfIO $ part1' lines
+      , bench "part2" $ nfIO $ part2' lines
+    ]
+
+benchmark = do
+    lines <- getLines "day2/input.txt"
+    time lines
