@@ -24,5 +24,8 @@ main = do
                     else if day == 3 then Day3.part2
                     else if day == 4 then Day4.part2
                     else putStrLn "I haven't solved that yet (or it doesn't exist)"
+                else if part == "b" then
+                    if day == 4 then Day4.benchmark
+                    else putStrLn "Not benchmarked"
                 else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
     else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"

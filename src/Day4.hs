@@ -17,6 +17,8 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Debug.Trace
+import Criterion.Main
+import System.Environment
 
 data Card = Card { i :: Int, winning :: Set.Set Int, have :: Set.Set Int } deriving (Ord, Show, Eq)
 
@@ -38,10 +40,12 @@ score c =
         if Set.size nums == 0 then 0
         else 2 ^ (Set.size nums - 1)
 
+part1' lines = print $ sum $ map (score . parseScratchCard) lines
+
 -- Part 1
 part1 = do
     lines <- getLines "day4/input.txt"
-    print $ sum $ map (score . parseScratchCard) lines
+    part1' lines
 
 -- Memoize the number of cards won by a specific scratchcard
 -- Map.Map Int Int, key = card id, value = how many
@@ -66,6 +70,18 @@ evaluateCards (currentCard:cards) cardCount =
 -- 11078992 is too high
 
 -- Part 2
+part2' lines = print $ evaluateCards (map parseScratchCard lines) Map.empty
+
 part2 = do
     lines <- getLines "day4/input.txt"
-    print $ evaluateCards (map parseScratchCard lines) Map.empty
+    part2' lines
+
+time lines =
+    withArgs ["--output", "day4.html"] $ defaultMain [
+        bench "part1" $ nfIO $ part1' lines
+      , bench "part2" $ nfIO $ part2' lines
+    ]
+
+benchmark = do
+    lines <- getLines "day4/input.txt"
+    time lines
