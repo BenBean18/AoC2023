@@ -5,6 +5,9 @@ import Data.List.Split
 
 import Data.Text(pack, unpack, replace, isInfixOf)
 
+import Criterion.Main
+import System.Environment
+
 -- Remove all non-numeric characters from string
 removeNonNumeric :: String -> String
 removeNonNumeric = filter (`elem` ['0'..'9'])
@@ -14,9 +17,11 @@ getNum :: String -> Int
 getNum s = read (head (removeNonNumeric s) : [last (removeNonNumeric s)]) :: Int
 
 -- Part 1
+part1' lines = print (sum $ map getNum lines)
+
 part1 = do
     lines <- getLines "day1/input.txt"
-    print (sum $ map getNum lines)
+    part1' lines
 
 -- Checks if a character is numeric
 isNumeric :: Char -> Bool
@@ -58,6 +63,18 @@ checkWord :: String -> Bool
 checkWord s = or [isInfixOf (pack "one") (pack s), isInfixOf (pack "two") (pack s), isInfixOf (pack "three") (pack s), isInfixOf (pack "four") (pack s), isInfixOf (pack "five") (pack s), isInfixOf (pack "six") (pack s), isInfixOf (pack "seven") (pack s), isInfixOf (pack "eight") (pack s), isInfixOf (pack "nine") (pack s)]
 
 -- Part 2
+part2' lines = print (sum $ map (getNum . iterBoth) lines)
+
 part2 = do
     lines <- getLines "day1/input.txt"
-    print (sum $ map (getNum . iterBoth) lines)
+    part2' lines
+
+time lines =
+    withArgs ["--output", "day1.html"] $ defaultMain [
+        bench "part1" $ nfIO $ part1' lines
+      , bench "part2" $ nfIO $ part2' lines
+    ]
+
+benchmark = do
+    lines <- getLines "day1/input.txt"
+    time lines
