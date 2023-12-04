@@ -4,6 +4,7 @@ import System.Environment
 import qualified Day1
 import qualified Day2
 import qualified Day3
+import qualified Day4
 
 main :: IO ()
 main = do
@@ -15,6 +16,7 @@ main = do
                     if day == 1 then Day1.part1
                     else if day == 2 then Day2.part1
                     else if day == 3 then Day3.part1
+                    else if day == 4 then Day4.part1
                     else putStrLn "I haven't solved that yet (or it doesn't exist)"
                 else if part == "2" then
                     if day == 1 then Day1.part2
