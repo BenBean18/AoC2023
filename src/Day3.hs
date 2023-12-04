@@ -14,6 +14,9 @@ import Data.Array ((!))
 
 import qualified Data.Map as Map
 
+import Criterion.Main
+import System.Environment
+
 coordinatesAroundList :: [(Int, Int)] -> [(Int, Int)]
 coordinatesAroundList coordsList = foldl (++) [] (map coordinatesAround coordsList)
 
@@ -38,9 +41,12 @@ findValidNumbers strs i s =
             map (\x -> read x :: Int) $ map snd $ filter (\(indices, str) -> validNumber strs (indices, i)) zipped
 
 -- Part 1
+part1' lines = print (sum $ (map (\i -> sum $ findValidNumbers lines i (lines !! i)) [0..length lines - 1]) )
+
 part1 = do
     lines <- getLines "day3/input.txt"
-    print (sum $ (map (\i -> sum $ findValidNumbers lines i (lines !! i)) [0..length lines - 1]) )
+    part1' lines
+    
 
 findPartNumbers lines = foldl (++) [] $ map (\i -> findValidNumbers lines i (lines !! i)) [0..length lines-1]
 
@@ -66,6 +72,18 @@ findGears strs = Map.filter (\nums -> length nums == 2) (Map.unionsWith (++) (ma
 -- 75039901 is too low
 
 -- Part 2
+part2' lines = print $ sum $ map product (Map.elems $ findGears lines)
+
 part2 = do
     lines <- getLines "day3/input.txt"
-    print $ sum $ map product (Map.elems $ findGears lines)
+    part2' lines
+
+time lines =
+    withArgs ["--output", "day3.html"] $ defaultMain [
+        bench "part1" $ nfIO $ part1' lines
+      , bench "part2" $ nfIO $ part2' lines
+    ]
+
+benchmark = do
+    lines <- getLines "day3/input.txt"
+    time lines

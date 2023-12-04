@@ -2,20 +2,13 @@ module Day4 where
 
 import Utilities
 import Data.List.Split
-
 import Data.List
-
 import Data.Text (pack, unpack, replace, isInfixOf)
-
 import Text.Regex.Base
 import Text.Regex.PCRE
-
 import Data.Array ((!))
-
 import qualified Data.Map as Map
-
 import qualified Data.Set as Set
-
 import Debug.Trace
 import Criterion.Main
 import System.Environment
@@ -35,7 +28,7 @@ winningNumbersWeHave :: Card -> Set.Set Int
 winningNumbersWeHave Card { winning = w, have = h } = Set.intersection w h
 
 score :: Card -> Int
-score c = 
+score c =
     let nums = winningNumbersWeHave c in
         if Set.size nums == 0 then 0
         else 2 ^ (Set.size nums - 1)
@@ -58,16 +51,13 @@ cardsWon :: Card -> [Int]
 cardsWon c = [(i c)..(i c + numWinning c)]
 
 evaluateCards :: [Card] -> Map.Map Int Int -> Int
-evaluateCards [] cardCount = (sum $ Map.elems cardCount) `div` 2 -- bad hack but it works, findWithDefault 1 in both places gives 2x
+evaluateCards [] cardCount = sum (Map.elems cardCount) `div` 2 -- bad hack but it works, findWithDefault 1 in both places gives 2x
 evaluateCards (currentCard:cards) cardCount =
-    let newCards = (cardsWon currentCard)
+    let newCards = cardsWon currentCard
         numNewCards = Map.findWithDefault 1 (i currentCard) cardCount -- # copies of current card
-        cardsToAdd = map (\cardId -> (cardId, numNewCards + (Map.findWithDefault 1 cardId cardCount))) newCards
+        cardsToAdd = map (\cardId -> (cardId, numNewCards + Map.findWithDefault 1 cardId cardCount)) newCards
         newCardCount = foldl (\m (k, v) -> Map.insert k v m) cardCount cardsToAdd in
             evaluateCards cards newCardCount
-
--- 5468303 is too low  
--- 11078992 is too high
 
 -- Part 2
 part2' lines = print $ evaluateCards (map parseScratchCard lines) Map.empty
