@@ -64,7 +64,26 @@ part1 = do
 
 part2' lines = print "Hi"
 
--- Part 1
+-- better way might be to represent as a "tree" of ranges or something? solve for intersections
+
+makeRange :: [Int] -> [Int]
+makeRange [a,b] = [a..a+b]
+
+parseSeeds2 :: String -> [Int]
+parseSeeds2 str = concatMap (\s -> makeRange (map (\i -> (read i :: Int)) (splitOn " " (head s)))) (str =~ "(\\d+) (\\d+)" :: [[String]])
+
+-- Thinking more
+-- As we build up the ranges we can keep the input as a range and just take the intersection, keep a list of ranges
+-- Not exactly sure how to implement but range intersection is 4 compares instead of checking every single value
+
+-- Or start at minimum location and work way up or something, idk and have to study for finals
+
+-- Part 2
 part2 = do
     lines <- getLines "day5/input.txt"
-    part1' lines
+    text <- getText "day5/input.txt"
+    let seeds = parseSeeds2 (head lines)
+    let maps = map parseLines (tail (map (head . splitOn "\n\n") (splitOn ":\n" text)))
+    let combined = combineMaps maps
+    print $ minimum $ map combined seeds
+    part2' lines
