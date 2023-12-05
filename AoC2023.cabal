@@ -27,10 +27,10 @@ executable AoC2023
     ghc-options: -optc-O3
 
     -- Modules included in this executable, other than Main.
-    other-modules: Utilities, Day1, Day2, Day3, Day4
+    other-modules: Utilities, Day1, Day2, Day3, Day4, Day5
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends:    base ^>=4.16.4.0, text ^>=1.2.5.0, array, regex-pcre-builtin, regex-base, containers, criterion, split, mod, ghc, PSQueue, multiset
+    build-depends:    base ^>=4.16.4.0, text ^>=1.2.5.0, array, regex-pcre-builtin, regex-base, containers, criterion, split, mod, ghc, PSQueue, multiset, IntervalMap
     hs-source-dirs:   src
     default-language: Haskell2010
