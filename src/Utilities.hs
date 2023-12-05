@@ -13,6 +13,12 @@ module Utilities where
         -- return the lines
         return linesOfFile
 
+    getText :: String -> IO String
+    getText s = do
+        -- get the lines of the file
+        contents <- Data.Text.IO.readFile s
+        return (unpack contents)
+
     -- Function to convert a string to (maybe) an int
     toInt :: String -> Maybe Int
     toInt i = readMaybe i :: Maybe Int

@@ -16,16 +16,20 @@ import Data.Maybe
 
 -- Idea: Each map is a function that outputs Optional[Destination] for a source number
 -- Then we store a LOT less data
-type AlMap = Int -> Maybe Int
+type AlMapMaybe = Int -> Maybe Int
+type AlMap = Int -> Int
+
+emptyMaybeMap :: AlMapMaybe
+emptyMaybeMap i = Nothing
 
 emptyMap :: AlMap
-emptyMap i = Nothing
+emptyMap i = i
 
 -- Format: destination source range_length
-parseLine :: String -> AlMap -> AlMap
+parseLine :: String -> AlMapMaybe -> AlMapMaybe
 parseLine s m =
     let splot = splitOn " " s
-        dst = read (splot !! 0) :: Int
+        dst = read (head splot) :: Int
         src = read (splot !! 1) :: Int
         len = read (splot !! 2) :: Int in
             (
@@ -37,15 +41,25 @@ parseLine s m =
             )
 
 parseLines :: String -> AlMap
-parseLines s = foldl (flip parseLine) emptyMap (splitOn "\n" s)
+parseLines s i = let maybeInt = foldl (flip parseLine) emptyMaybeMap (splitOn "\n" s) i in
+                     if isJust maybeInt then fromJust maybeInt else i
 
+parseSeeds :: String -> [Int]
+parseSeeds str = map (\s -> (read (head s) :: Int)) (str =~ "(\\d+)" :: [[String]])
 
+combineMaps :: [AlMap] -> AlMap
+combineMaps = foldl (\existing new -> (\i -> (new (existing i)))) emptyMap
 
 part1' lines = print "Hi"
 
 -- Part 1
 part1 = do
     lines <- getLines "day5/input.txt"
+    text <- getText "day5/input.txt"
+    let seeds = parseSeeds (head lines)
+    let maps = map parseLines (tail (map (head . splitOn "\n\n") (splitOn ":\n" text)))
+    let combined = combineMaps maps
+    print $ minimum $ map combined seeds
     part1' lines
 
 part2' lines = print "Hi"
