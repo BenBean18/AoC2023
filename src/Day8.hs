@@ -28,12 +28,12 @@ go m n 'R' = m Map.! right n
 
 parseNode :: String -> Node
 parseNode s =
-    let matches = map head (s =~ "([A-Z]+)" :: [[String]]) in
+    let matches = map head (s =~ "([A-Z0-9]+)" :: [[String]]) in
         Node { name = head matches, left = matches !! 1, right = matches !! 2 }
 
 parseMap :: [String] -> DesertMap
-parseMap strs = 
-    let nodes = map parseNode strs in 
+parseMap strs =
+    let nodes = map parseNode strs in
         Map.fromList (map (\n -> (name n, n)) nodes)
 
 parse :: [String] -> (DesertMap, Instructions)
@@ -44,7 +44,7 @@ findZZZ' _ _ Node { name = "ZZZ" } = 0
 findZZZ' m (i:is) n = 1 + findZZZ' m is (go m n i)
 
 part1' :: [String] -> IO ()
-part1' lines = 
+part1' lines =
     let (map, instructions) = parse lines
         result = findZZZ' map instructions (map Map.! "AAA") in print result
 
@@ -53,7 +53,19 @@ part1 = do
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+doAll :: DesertMap -> Instructions -> [Node] -> Int
+doAll m (i:is) ns = (trace $ show (map name ns)) (
+    if all (\n -> last (name n) == 'Z') ns then 0
+    else 1 + doAll m is (map (\n -> go m n i) ns))
+
+toString :: [Char] -> String
+toString c = c
+
+part2' lines =
+    let (desertMap, instructions) = parse lines
+        startingNames = filter (\s -> last s == 'A') (Map.keys desertMap)
+        startingNodes = map (desertMap Map.!) startingNames
+        result = doAll desertMap instructions startingNodes in print result
 
 part2 = do
     lines <- getLines "day8/input.txt"
