@@ -46,11 +46,30 @@ numberOfWays race = maxTime race - minTime race
 part1' lines = 
     let result = product $ map numberOfWays (parseRaces lines) in print result
 
+-- Part 1
 part1 = do
     lines <- getLines "day6/input.txt"
-    text <- getText "day6/input.txt"
     part1' lines
 
 -- Part 2 is part 1 but you do s/(\d) + (\d)/$1$2
 
-part2 = print "Hi"
+onlyNumber :: String -> String
+onlyNumber s = ": " ++ concatMap head (s =~ "(\\d+)" :: [[String]])
+
+part2' lines =
+    let result = product $ map numberOfWays (parseRaces (map onlyNumber lines)) in print result
+
+-- Part 2
+part2 = do
+    lines <- getLines "day6/input.txt"
+    part2' lines
+
+benchTime lines =
+    withArgs ["--output", "day6.html"] $ defaultMain [
+        bench "part1" $ nfIO $ part1' lines
+      , bench "part2" $ nfIO $ part2' lines
+    ]
+
+benchmark = do
+    lines <- getLines "day6/input.txt"
+    benchTime lines

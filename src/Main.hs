@@ -35,6 +35,7 @@ main = do
                     else if day == 2 then Day2.benchmark
                     else if day == 3 then Day3.benchmark
                     else if day == 4 then Day4.benchmark
+                    else if day == 6 then Day6.benchmark
                     else putStrLn "Not benchmarked"
                 else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
     else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
