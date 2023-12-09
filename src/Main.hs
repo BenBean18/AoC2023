@@ -8,6 +8,7 @@ import qualified Day4
 import qualified Day5
 import qualified Day6
 import qualified Day7
+import qualified Day7_part2
 
 main :: IO ()
 main = do
@@ -31,7 +32,7 @@ main = do
                     else if day == 4 then Day4.part2
                     else if day == 5 then Day5.part2
                     else if day == 6 then Day6.part2
-                    else if day == 7 then Day7.part2
+                    else if day == 7 then Day7_part2.part2
                     else putStrLn "I haven't solved that yet (or it doesn't exist)"
                 else if part == "b" then
                     if day == 1 then Day1.benchmark
