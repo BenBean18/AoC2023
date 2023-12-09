@@ -17,6 +17,8 @@ import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
 
+import Day7_part2 (part2')
+
 {-
 Every hand is exactly one type. From strongest to weakest, they are:
 
@@ -130,10 +132,17 @@ part1 = do
     lines <- getLines "day7/input.txt"
     part1' lines
 
-part2' lines =
-    print "Hi"
-
--- Part 2
+-- Part 2 (see Day7_part2.hs for the code)
 part2 = do
     lines <- getLines "day7/input.txt"
     part2' lines
+
+time lines =
+    withArgs ["--output", "day7.html"] $ defaultMain [
+        bench "part1" $ nfIO $ part1' lines
+      , bench "part2" $ nfIO $ part2' lines
+    ]
+
+benchmark = do
+    lines <- getLines "day7/input.txt"
+    time lines
