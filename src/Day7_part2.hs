@@ -94,8 +94,12 @@ replaceWithAll s i = map (\c -> take i s ++ [c] ++ drop (i + 1) s) charRanks
 
 -- ugh jokers
 -- all possible characters for all possible J's
-allHands :: String -> [String]
-allHands s = s : concatMap (replaceWithAll s) (indicesOf s 'J')
+-- initial condition: strs = [s], ints = (indicesOf s 'J')
+allHands' :: [String] -> [Int] -> [String]
+allHands' strs [] = strs
+allHands' strs (x:xs) = allHands' (concatMap (\s -> replaceWithAll s x) strs) xs
+
+allHands s = allHands' [s] (indicesOf s 'J')
 
 handRank :: String -> Int
 handRank s =
