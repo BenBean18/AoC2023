@@ -37,10 +37,11 @@ fiveOfAKind s = minimum s == maximum s
 fourOfAKind :: String -> Bool
 fourOfAKind s =
     let sorted = sort s in
-        head sorted == (sorted !! 4) ||
+        head sorted == (sorted !! 3) ||
         (sorted !! 1) == last sorted
 
 allEqual :: (Eq a) => [a] -> Bool
+allEqual [x] = True
 allEqual [a,b] = a == b
 allEqual (x:xs) = head xs == x && allEqual xs
 
@@ -54,7 +55,7 @@ fullHouse s =
 threeOfAKind :: String -> Bool
 threeOfAKind s =
     let sorted = sort s
-        rev = reverse sorted in allEqual (take 3 sorted) || allEqual (take 3 rev)
+        rev = reverse sorted in allEqual (take 3 sorted) || allEqual (take 3 rev) || allEqual (drop 1 (take 4 sorted))
 
 numPairs :: String -> Int
 numPairs s =
@@ -74,28 +75,59 @@ handTypeRank :: String -> Int
 handTypeRank s =
     let handChecks = map (\f -> f s) [fiveOfAKind, fourOfAKind, fullHouse, threeOfAKind, twoPair, onePair, highCard]
         handChecksAndIndices = zip handChecks [0..length handChecks-1]
-        conditionsSatisfied = filter fst handChecksAndIndices in
-            length handChecks - snd (head conditionsSatisfied)
+        conditionsSatisfied = filter fst handChecksAndIndices in {-(trace $ show s ++ " " ++ show handChecks)-} (
+            (length handChecks + 1) - snd (head conditionsSatisfied))
 
 -- higher is better
 charRanks = reverse ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2']
 
 charRank :: Char -> Int
-charRank c = fromJust (elemIndex c charRanks)
+charRank c = fromJust (elemIndex c charRanks) + 1
 
 handRank :: String -> Int
 handRank s =
-    (handTypeRank s * 15 * 15 * 15 * 15 * 15) -- high enough to have more of an impact than the largest possible charRank
-    + sum (zipWith (*) (map charRank s) (reverse [1..5]))
+    (handTypeRank s * 15 * 15 * 15 * 15 * 15 * 15 * 15) -- high enough to have more of an impact than the largest possible charRank
+    + sum (zipWith (*) (map charRank s) (map (15 ^) (reverse [1..5])))
 
 sortHands :: [String] -> [String]
 sortHands = sortBy (\s1 s2 -> compare (handRank s1) (handRank s2))
 
-part1' lines = print "Hi"
+getScores :: [(String, Int)] -> [Int]
+getScores handsAndBids =
+    let ranks = map (\(h,b) -> handRank h) handsAndBids
+        bigRanksAndBids = map (\((h,b),r) -> (r,b)) (sortBy (\s1 s2 -> compare (snd s1) (snd s2)) (zip handsAndBids ranks))
+        ranksAndBids = zip [1..length handsAndBids] (map snd bigRanksAndBids) in {-(trace $ show ranksAndBids)-} (map (uncurry (*)) ranksAndBids)
+
+{-
+
+getScores :: [(String, Int)] -> [Int]
+getScores handsAndBids =
+    let ranks = map (\(h,b) -> handRank h) handsAndBids
+        sorted = sortBy  handsAndBids
+        ranksAndBids = zipWith (curry (\((hand,bid),rank) -> (rank, bid))) sorted [1..length sorted] in {-(trace $ show ranksAndBids)-} (map (uncurry (*)) ranksAndBids)
+
+-}
+
+testData :: [(String, Int)]
+testData = [("32T3K",765), ("KK677",28), ("KTJJT",220), ("QQQJA",483), ("T55J5",684)]
+
+parseHand :: String -> (String, Int)
+parseHand s =
+    let w = words s in (head w, read (w !! 1) :: Int)
+
+parseHands :: [String] -> [(String, Int)]
+parseHands = map parseHand
+
+part1' lines =
+    let hands = parseHands lines
+        result = sum $ getScores hands in print result
+
+-- 252936384 too low
+-- 253687535 too high
 
 -- Part 1
 part1 = do
-    lines <- getLines "day6/input.txt"
+    lines <- getLines "day7/input.txt"
     part1' lines
 
 part2' lines =
@@ -103,5 +135,5 @@ part2' lines =
 
 -- Part 2
 part2 = do
-    lines <- getLines "day6/input.txt"
+    lines <- getLines "day7/input.txt"
     part2' lines
