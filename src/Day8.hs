@@ -58,6 +58,18 @@ doAll m (i:is) ns = (trace $ show (map name ns)) (
     if all (\n -> last (name n) == 'Z') ns then 0
     else 1 + doAll m is (map (\n -> go m n i) ns))
 
+-- Looks like in the inputs, there is a cycle here
+-- If it takes n steps to reach a finishing point, it will take n more steps to do it again
+-- So we just find the time to finish and that's a cycle with length n
+-- Then least common multiple of all of the cycles to find when they all hit an ending point
+findTimeToFinish :: DesertMap -> Instructions -> Node -> Int
+findTimeToFinish m (i:is) n =
+    if last (name n) == 'Z' then 0
+    else 1 + findTimeToFinish m is (go m n i)
+
+lcmList :: [Int] -> Int
+lcmList = foldl lcm 1
+
 toString :: [Char] -> String
 toString c = c
 
@@ -65,7 +77,7 @@ part2' lines =
     let (desertMap, instructions) = parse lines
         startingNames = filter (\s -> last s == 'A') (Map.keys desertMap)
         startingNodes = map (desertMap Map.!) startingNames
-        result = doAll desertMap instructions startingNodes in print result
+        result = lcmList $ map (findTimeToFinish desertMap instructions) startingNodes in print result
 
 part2 = do
     lines <- getLines "day8/input.txt"
