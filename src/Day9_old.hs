@@ -27,7 +27,7 @@ import Numeric.LinearAlgebra
 -- will be degree [length of the vector] - 1 since that works
 designMatrix :: (Numeric t) => [t] -> Matrix t
 designMatrix xValues =
-    let columns = replicate (fromIntegral $ length xValues) 1 : map (\exp -> map (^ exp) xValues) [1..(fromIntegral $ length xValues)] in
+    let columns = map (\exp -> map (^ exp) xValues) [0..(fromIntegral $ length xValues)] in
         fromColumns (map fromList columns)
 
 -- Y = Xb
@@ -46,7 +46,7 @@ applyPolynomial beta x = sum (map (\i -> {-(trace $ show (beta !! i) ++ " " ++ s
 
 -- 20^20 is huge, so we're scaling x values down instead
 convertX :: Double -> Double
-convertX a = a / 19
+convertX a = a
 
 extrapolateFloating :: [Double] -> Double
 extrapolateFloating history = linearRegression (map convertX [0..(fromIntegral $ length history-1)]) history (convertX (fromIntegral (length history)))
@@ -58,7 +58,7 @@ extrapolateHistory :: String -> Double
 extrapolateHistory s =
     let nums = map (\w -> (read w :: Double)) (words s)
         scaling = maximum (map abs nums) in
-        extrapolate (map (/ scaling) nums) * scaling
+        extrapolate nums
 
 -- Part 1
 part1' lines =
