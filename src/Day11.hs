@@ -83,9 +83,24 @@ part1 = do
     part1' lines
 
 -- Part 2
+-- Note: expanding each row by +1 more leads to a constant distance increase
+expandRowsBy :: [String] -> Int -> [String]
+expandRowsBy [] _ = []
+expandRowsBy (x:xs) i = if isEmpty x then x : (replicate i x) ++ expandRowsBy xs i else x : expandRowsBy xs i
 
+expandGalaxyBy :: [String] -> Int -> [String]
+expandGalaxyBy strs i = expandRowsBy (transpose (expandRowsBy (transpose strs) i)) i
 
-part2' lines = print "Hi"
+part2' lines = 
+    let expandedByOne = expandGalaxyBy lines 1
+        expandedByTwo = expandGalaxyBy lines 2
+        coordsOne = findGalaxies expandedByOne 0
+        coordsTwo = findGalaxies expandedByTwo 0
+        distancesOne = sum (pairDistances coordsOne 0) `div` 2
+        distancesTwo = sum (pairDistances coordsTwo 0) `div` 2
+        delta = distancesTwo - distancesOne
+        distancesOneMillion = distancesOne + (delta * (1000000 - 1 - 1)) in do
+            print distancesOneMillion
 
 part2 = do
     lines <- getLines "day11/input.txt"
