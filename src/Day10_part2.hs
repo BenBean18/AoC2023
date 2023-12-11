@@ -205,8 +205,8 @@ canMove chars tiles toCheck current =
         tile2 = (current `add` direction) `add` (perpendicular direction)
         in if not (inBounds chars tile1 && inBounds chars tile2) then False else
         let pipe1 = fromChar $ charAt chars tile1
-            pipe2 = fromChar $ charAt chars tile2 in (trace $ show pipe1 ++ " " ++ show pipe2 ++ " " ++ show direction ++ " " ++ show current) (
-                if isJust pipe1 && isJust pipe2 then (trace $ show (areParallel (fromJust pipe1) (fromJust pipe2) direction)) (areParallel (fromJust pipe1) (fromJust pipe2) direction) else False)
+            pipe2 = fromChar $ charAt chars tile2 in {-(trace $ show pipe1 ++ " " ++ show pipe2 ++ " " ++ show direction ++ " " ++ show current)-} (
+                if isJust pipe1 && isJust pipe2 then {-(trace $ show (areParallel (fromJust pipe1) (fromJust pipe2) direction))-} (areParallel (fromJust pipe1) (fromJust pipe2) direction) else False)
 
 -- This breaks on:
 {-
@@ -224,7 +224,7 @@ bfsFill :: [String] -> [Coord] -> [Coord] -> Set.Set Coord -> Set.Set Coord
 bfsFill chars tiles [] visited = visited
 bfsFill chars tiles (current:coords) visited =
     let neighbors = filter (\c -> (c `notElem` tiles) && c `Set.notMember` visited) (neighboringCoords chars current) in
-        (trace $ show (Set.size visited)) bfsFill chars tiles (coords ++ neighbors) (foldl (flip Set.insert) visited neighbors)
+        {-(trace $ show (Set.size visited))-} bfsFill chars tiles (coords ++ neighbors) (foldl (flip Set.insert) visited neighbors)
 
 replaceChar :: String -> Int -> Char -> String
 replaceChar s i c = (take i s) ++ [c] ++ (drop (i+1) s)
