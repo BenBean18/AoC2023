@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant if" #-}
 module Day10 where
 
 import Utilities
@@ -127,35 +129,13 @@ pipeCompatible charList coord1 coord2 =
 findStartingCoord :: [String] -> Int -> Coord
 findStartingCoord strs y = if 'S' `elem` (strs !! y) then (fromJust ('S' `elemIndex` (strs !! y)), y) else findStartingCoord strs (y+1)
 
--- usePipe :: [String] -> Coord -> Coord -> Maybe Coord
--- usePipe charList (xc, yc) (xp, yp) =
---     -- bounds checking
---     if xc < 0 || yc < 0 || xc >= length (head charList) || yc > length charList || xp < 0 || yp < 0 || xp >= length (head charList) || yp > length charList || isNothing (fromChar (charList !! yp !! xp)) then Nothing
---     else
---         let sp = fromChar (charList !! yc !! xc)
---             p = fromJust $ fromChar (charList !! yp !! xp)
---             s = (xp,yp) `add` start p
---             e = (xp,yp) `add` end p in (trace $ show sp ++ " " ++ show p)
---             (if isJust sp && not (((xc,yc) `add` start (fromJust sp) == (xp,yp) || (xc,yc) `add` end (fromJust sp) == (xp,yp)) && (
---             (xc,yc) `add` start (fromJust sp) == (xp,yp) `sub` start p || (xc,yc) `add` end (fromJust sp) == (xp,yp) `sub` start p || (xc,yc) `add` start (fromJust sp) == (xp,yp) `sub` end p || (xc,yc) `add` end (fromJust sp) == (xp,yp) `sub` end p)) then Nothing
---             else if s == (xc,yc) then Just (xp,yp) -- Just e
---             else if e == (xc,yc) then Just (xp,yp) -- Just s
---             else Nothing)
-
--- checkPipes :: [String] -> Coord -> [Coord]
--- checkPipes charList s =
---     mapMaybe (usePipe charList s . (s `add`)) [(0,1),(0,-1),(1,0),(-1,0)] -- haskell language server is great
-
--- followPipe :: [String] -> Set.Set Coord -> Coord -> [Coord]
--- followPipe charList visited current = filter (`notElem` visited) (checkPipes charList current)
-
 findLengthOfChain :: Node -> Int
 findLengthOfChain (Node c []) = 0
-findLengthOfChain (Node c (node:nodes))= 1 + findLengthOfChain node
+findLengthOfChain (Node c (node:nodes)) = 1 + findLengthOfChain node
 
 -- Part 1
 part1' :: [String] -> IO ()
-part1' lines = 
+part1' lines =
     let start = findStartingCoord lines 0
         (Node coord nodes) = parseGraph lines Set.empty start in
             --print nodes
@@ -166,7 +146,56 @@ part1 = do
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+-- Flood fill from outside and subtract # of tiles in the loop
+
+tilesOfLoop :: Node -> [Coord]
+tilesOfLoop (Node c []) = []
+tilesOfLoop (Node c (node:nodes)) = c : tilesOfLoop node
+
+coordOf :: Node -> Coord
+coordOf (Node c _) = c
+
+tileOutsideOfNodes :: [Coord] -> Coord
+tileOutsideOfNodes nodes =
+    if (0,0) `notElem` nodes then (0,0)
+    else error "0,0 is in the loop :("
+
+neighboringCoords :: [String] -> Coord -> [Coord]
+neighboringCoords chars c = filter (inBounds chars) (map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)])
+
+dotTuples :: Coord -> Coord -> Int
+dotTuples (x1,y1) (x2,y2) = x1 * x2 + y1 * y2
+
+areParallel :: Pipe -> Pipe -> Coord -> Bool
+areParallel p1 p2 c = (end p1) `dotTuples` (end p2) /= 0 && (end p1) `dotTuples` c /= 0 || (start p1) `dotTuples` (end p2) /= 0 && (end p2) `dotTuples` c /= 0 || (end p1) `dotTuples` (start p2) /= 0 && (end p1) `dotTuples` c /= 0 || (start p1) `dotTuples` (start p2) /= 0 && (start p1) `dotTuples` c /= 0
+
+-- Can move to all neighboring non-pipe tiles
+-- (ignoring sliding between pipes for now)
+bfsFill :: [String] -> [Coord] -> [Coord] -> Set.Set Coord -> Set.Set Coord
+bfsFill chars tiles [] visited = visited
+bfsFill chars tiles (current:coords) visited =
+    let neighbors = filter (\c -> c `notElem` tiles && c `Set.notMember` visited) (neighboringCoords chars current) in
+        bfsFill chars tiles (coords ++ neighbors) (foldl (flip Set.insert) visited neighbors)
+
+replaceChar :: String -> Int -> Char -> String
+replaceChar s i c = (take i s) ++ [c] ++ (drop (i+1) s)
+
+visualizeTileSet :: [String] -> Int -> [Coord] -> String
+visualizeTileSet charList i coordList = 
+    if i >= length charList then ""
+    else
+    let currentRow = replicate (length (charList !! i)) '.'
+        theseCoords = filter (\c -> snd c == i) coordList in
+        foldl (\s (i,c) -> replaceChar s i c) currentRow (zip (map fst theseCoords) (replicate (length theseCoords) '#')) ++ "\n" ++ visualizeTileSet charList (i+1) coordList 
+
+part2' lines =
+    let start = findStartingCoord lines 0
+        (Node coord nodes) = parseGraph lines Set.empty start
+        loopTiles = coordOf (last nodes) : (coord : tilesOfLoop (head nodes))
+        outside = tileOutsideOfNodes loopTiles
+        tilesFound = bfsFill lines loopTiles [outside] Set.empty in do
+            print tilesFound
+            putStrLn (visualizeTileSet lines 0 (Set.toList tilesFound))
 
 part2 = do
     lines <- getLines "day10/input.txt"
