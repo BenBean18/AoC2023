@@ -16,7 +16,7 @@ import System.Environment
 import Data.Maybe
 import qualified Data.MultiSet as MultiSet
 
-import Data.List.Unique (allUnique)
+import Data.List.Unique (allUnique, countElem)
 
 -- Idea: search going from both ends of the loop and when they meet that should be the farthest point
 -- Or just BFS maybe? But it's on a cycle so it might be weird. Probably makes the most sense though
@@ -243,6 +243,14 @@ padLineWithDots line = "." ++ intersperse '.' line ++ "."
 padLinesWithDots :: [String] -> [String]
 padLinesWithDots lines = [replicate (length (head lines) * 2 + 1) '.'] ++ intersperse (replicate (length (head lines) * 2 + 1) '.') (map padLineWithDots lines) ++ [replicate (length (head lines) * 2 + 1) '.']
 
+everyOtherElement :: [a] -> [a]
+everyOtherElement [] = []
+everyOtherElement (x:(y:xs)) = y : everyOtherElement xs
+everyOtherElement (x:xs) = []
+
+unpadLinesWithDots :: [String] -> [String]
+unpadLinesWithDots lines = map everyOtherElement (everyOtherElement lines)
+
 part2' oldLines = do
     let lines = padLinesWithDots oldLines
     putStrLn (concatMap (\s -> s ++ "\n") lines)
@@ -262,12 +270,17 @@ part2' oldLines = do
     print outside
     let tilesFound = Set.filter (`notElem` loopTiles) (bfsFill filledLines loopTiles [outside] Set.empty)
     print tilesFound
-    putStrLn (visualizeTileSet lines 0 (Set.toList tilesFound))
+    let visualizedTilesFound = unpadLinesWithDots (splitOn "\n" (visualizeTileSet lines 0 (Set.toList tilesFound)))
+    putStrLn (concatMap (\s -> s ++ "\n") visualizedTilesFound)
+    let outsideTileCount = countElem '#' (concat visualizedTilesFound)
     print "---"
-    putStrLn (visualizeTileSet lines 0 loopTiles)
+    let visualizedLoopTiles = unpadLinesWithDots (splitOn "\n" (visualizeTileSet lines 0 loopTiles))
+    putStrLn (concatMap (\s -> s ++ "\n") visualizedLoopTiles)
+    let loopTileCount = countElem '#' (concat visualizedLoopTiles)
     print "---"
-    let totalArea = (length filledLines) * (length (head filledLines))
-    let result = totalArea - (Set.size tilesFound) - (length loopTiles)
+    let totalArea = (length (unpadLinesWithDots lines)) * (length (head (unpadLinesWithDots lines)))
+    putStrLn (show totalArea ++ " " ++ show outsideTileCount ++ " " ++ show loopTileCount)
+    let result = totalArea - outsideTileCount - loopTileCount
     print result
 
 part2 = do
