@@ -93,13 +93,12 @@ expandGalaxyBy strs i = expandRowsBy (transpose (expandRowsBy (transpose strs) i
 
 part2' lines = 
     let expandedByOne = expandGalaxyBy lines 1
-        expandedByTwo = expandGalaxyBy lines 2
+        coords = findGalaxies lines 0
         coordsOne = findGalaxies expandedByOne 0
-        coordsTwo = findGalaxies expandedByTwo 0
+        distances = sum (pairDistances coords 0) `div` 2
         distancesOne = sum (pairDistances coordsOne 0) `div` 2
-        distancesTwo = sum (pairDistances coordsTwo 0) `div` 2
-        delta = distancesTwo - distancesOne
-        distancesOneMillion = distancesOne + (delta * (1000000 - 1 - 1)) in do
+        delta = distancesOne - distances
+        distancesOneMillion = distances + (delta * (1000000 - 1)) in do
             print distancesOneMillion
 
 part2 = do
