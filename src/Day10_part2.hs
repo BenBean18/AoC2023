@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant if" #-}
-module Day10 where
+module Day10_part2 where
 
 import Utilities
 import Data.List.Split
@@ -17,8 +17,6 @@ import Data.Maybe
 import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
-
-import qualified Day10_part2
 
 -- Idea: search going from both ends of the loop and when they meet that should be the farthest point
 -- Or just BFS maybe? But it's on a cycle so it might be weird. Probably makes the most sense though
@@ -58,21 +56,21 @@ fromChar c
 
 start :: Pipe -> Coord
 start p
-    | p == NS = (0,-1)
-    | p == EW = (-1,0)
-    | p == NE = (0,-1)
-    | p == NW = (0,-1)
-    | p == SW = (0,1)
-    | p == SE = (0,1)
+    | p == NS = (0,-2)
+    | p == EW = (-2,0)
+    | p == NE = (0,-2)
+    | p == NW = (0,-2)
+    | p == SW = (0,2)
+    | p == SE = (0,2)
 
 end :: Pipe -> Coord
 end p
-    | p == NS = (0,1)
-    | p == EW = (1,0)
-    | p == NE = (1,0)
-    | p == NW = (-1,0)
-    | p == SW = (-1,0)
-    | p == SE = (1,0)
+    | p == NS = (0,2)
+    | p == EW = (2,0)
+    | p == NE = (2,0)
+    | p == NW = (-2,0)
+    | p == SW = (-2,0)
+    | p == SE = (2,0)
 
 add :: Coord -> Coord -> Coord
 add (x1,y1) (x2,y2) = (x1+x2, y1+y2)
@@ -95,7 +93,7 @@ charAt charList (x,y) = charList !! y !! x
 -- all nodes should be degree 2
 parseGraph :: [String] -> Set.Set Coord -> Coord -> Node
 parseGraph charList visited s =
-    let potentialPipes = filter (\c -> Set.notMember c visited && pipeCompatible charList s c) $ map (s `add`) [(0,1),(0,-1),(1,0),(-1,0)]
+    let potentialPipes = filter (\c -> Set.notMember c visited && pipeCompatible charList s c) $ map (s `add`) [(0,2),(0,-2),(2,0),(-2,0)]
         newVisited = Set.insert s visited in
             Node s (map (parseGraph charList newVisited) potentialPipes)
 
@@ -162,9 +160,12 @@ tilesOfLoop :: Node -> [Coord]
 tilesOfLoop (Node c []) = []
 tilesOfLoop (Node c (node:nodes)) = c : tilesOfLoop node
 
+divCoord :: Coord -> Coord -> Coord
+divCoord (x1,y1) (x2,y2) = (x1 `div` x2, y1 `div` y2)
+
 fillLoop :: Node -> [String] -> [String]
 fillLoop (Node c []) strs = strs
-fillLoop (Node c (node:nodes)) strs = fillLoop node (replace2D (const '-') (coordOf node `sub` c) strs)
+fillLoop (Node c (node:nodes)) strs = fillLoop node (replace2D (const '-') ((coordOf node `add` c) `divCoord` (2,2)) strs)
 
 coordOf :: Node -> Coord
 coordOf (Node c _) = c
@@ -174,8 +175,19 @@ tileOutsideOfNodes nodes =
     if (0,0) `notElem` nodes then (0,0)
     else error "0,0 is in the loop :("
 
+canGo :: [String] -> Coord -> Coord -> Bool
+canGo chars c1 c2 =
+    let maybePipe = fromChar $ charAt chars c1
+        otherMaybePipe = fromChar $ charAt chars c2 in
+            if isNothing maybePipe then True
+            else
+                let pipe = fromJust maybePipe in
+                    if isNothing otherMaybePipe then (start pipe) `dotTuples` (c2 `sub` c1) == 0 && (end pipe) `dotTuples` (c2 `sub` c1) == 0
+                    else False
+
 neighboringCoords :: [String] -> Coord -> [Coord]
-neighboringCoords chars c = filter (inBounds chars) (map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)])
+neighboringCoords chars c =
+    let allDirs = filter (inBounds chars) (map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)]) in filter (canGo chars c) allDirs
 
 dotTuples :: Coord -> Coord -> Int
 dotTuples (x1,y1) (x2,y2) = x1 * x2 + y1 * y2
@@ -191,9 +203,19 @@ canMove chars tiles toCheck current =
     let direction = toCheck `sub` current
         tile1 = current `add` direction
         tile2 = (current `add` direction) `add` (perpendicular direction)
-        pipe1 = fromChar $ charAt chars tile1
-        pipe2 = fromChar $ charAt chars tile2 in
-            if isJust pipe1 && isJust pipe2 then areParallel (fromJust pipe1) (fromJust pipe2) direction else False
+        in if not (inBounds chars tile1 && inBounds chars tile2) then False else
+        let pipe1 = fromChar $ charAt chars tile1
+            pipe2 = fromChar $ charAt chars tile2 in (trace $ show pipe1 ++ " " ++ show pipe2 ++ " " ++ show direction ++ " " ++ show current) (
+                if isJust pipe1 && isJust pipe2 then (trace $ show (areParallel (fromJust pipe1) (fromJust pipe2) direction)) (areParallel (fromJust pipe1) (fromJust pipe2) direction) else False)
+
+-- This breaks on:
+{-
+|F--7
+||  |
+|L--J
+
+-}
+-- Since it goes up the left side and once it gets to the middle pipe in the second column it thinks it can go right
 
 -- Check if parallel to other neighboring ones w.r.t. 
 -- Can move to all neighboring non-pipe tiles
@@ -215,9 +237,39 @@ visualizeTileSet charList i coordList =
         theseCoords = filter (\c -> snd c == i) coordList in
         foldl (\s (i,c) -> replaceChar s i c) currentRow (zip (map fst theseCoords) (replicate (length theseCoords) '#')) ++ "\n" ++ visualizeTileSet charList (i+1) coordList
 
-part2' = Day10_part2.part2'
+padLineWithDots :: String -> String
+padLineWithDots line = "." ++ intersperse '.' line ++ "."
 
-part2 = Day10_part2.part2
+padLinesWithDots :: [String] -> [String]
+padLinesWithDots lines = [replicate (length (head lines) * 2 + 1) '.'] ++ intersperse (replicate (length (head lines) * 2 + 1) '.') (map padLineWithDots lines) ++ [replicate (length (head lines) * 2 + 1) '.']
+
+part2' oldLines = do
+    let lines = padLinesWithDots oldLines
+    putStrLn (concatMap (\s -> s ++ "\n") lines)
+    print "---"
+    let start = findStartingCoord lines 0
+    print start
+    let (Node coord nodes) = parseGraph lines Set.empty start
+    putStrLn (concatMap (\s -> s ++ "\n") (fillLoop (Node coord nodes) lines))
+    print "---"
+    print ((findLengthOfChain (head nodes) + 2) `div` 2)
+    let loopTiles = coordOf (last nodes) : (coord : tilesOfLoop (head nodes))
+    let outside = tileOutsideOfNodes loopTiles
+    print loopTiles
+    print outside
+    let tilesFound = Set.filter (`notElem` loopTiles) (bfsFill lines loopTiles [outside] Set.empty)
+    print tilesFound
+    putStrLn (visualizeTileSet lines 0 (Set.toList tilesFound))
+    print "---"
+    putStrLn (visualizeTileSet lines 0 loopTiles)
+    print "---"
+    let totalArea = (length lines) * (length (head lines))
+    let result = totalArea - (Set.size tilesFound) - (length loopTiles)
+    print result
+
+part2 = do
+    lines <- getLines "day10/input.txt"
+    part2' lines
 
 time lines =
     withArgs ["--output", "day10.html"] $ defaultMain [
