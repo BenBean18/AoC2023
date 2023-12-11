@@ -154,7 +154,7 @@ replace f i (x:xs) = x : replace f (i-1) xs
 replace f i [] = []
 
 replace2D :: (a -> a) -> (Int, Int) -> [[a]] -> [[a]]
-replace2D f (x,y) = replace (replace f y) x
+replace2D f (x,y) = replace (replace f x) y
 
 tilesOfLoop :: Node -> [Coord]
 tilesOfLoop (Node c []) = []
@@ -163,9 +163,9 @@ tilesOfLoop (Node c (node:nodes)) = c : tilesOfLoop node
 divCoord :: Coord -> Coord -> Coord
 divCoord (x1,y1) (x2,y2) = (x1 `div` x2, y1 `div` y2)
 
-fillLoop :: Node -> [String] -> [String]
-fillLoop (Node c []) strs = strs
-fillLoop (Node c (node:nodes)) strs = fillLoop node (replace2D (const '-') ((coordOf node `add` c) `divCoord` (2,2)) strs)
+fillLoop :: Node -> [Coord] -> [Coord]
+fillLoop (Node c []) coords = coords
+fillLoop (Node c (node:nodes)) coords = fillLoop node (((coordOf node `add` c) `divCoord` (2,2)) : coords)
 
 coordOf :: Node -> Coord
 coordOf (Node c _) = c
@@ -223,7 +223,7 @@ canMove chars tiles toCheck current =
 bfsFill :: [String] -> [Coord] -> [Coord] -> Set.Set Coord -> Set.Set Coord
 bfsFill chars tiles [] visited = visited
 bfsFill chars tiles (current:coords) visited =
-    let neighbors = filter (\c -> (c `notElem` tiles || canMove chars tiles c current) && c `Set.notMember` visited) (neighboringCoords chars current) in
+    let neighbors = filter (\c -> (c `notElem` tiles) && c `Set.notMember` visited) (neighboringCoords chars current) in
         bfsFill chars tiles (coords ++ neighbors) (foldl (flip Set.insert) visited neighbors)
 
 replaceChar :: String -> Int -> Char -> String
@@ -250,20 +250,23 @@ part2' oldLines = do
     let start = findStartingCoord lines 0
     print start
     let (Node coord nodes) = parseGraph lines Set.empty start
-    putStrLn (concatMap (\s -> s ++ "\n") (fillLoop (Node coord nodes) lines))
+    print (Node coord nodes)
+    let coordsToFill = (((coordOf (last nodes) `add` coord) `divCoord` (2,2)) : (fillLoop (Node coord nodes) []))
+    let filledLines = foldl (\l i -> replace2D (const '-') i l) lines coordsToFill
+    putStrLn (concatMap (\s -> s ++ "\n") filledLines)
     print "---"
     print ((findLengthOfChain (head nodes) + 2) `div` 2)
-    let loopTiles = coordOf (last nodes) : (coord : tilesOfLoop (head nodes))
+    let loopTiles = (coordOf (last nodes) : (coord : tilesOfLoop (head nodes))) ++ coordsToFill
     let outside = tileOutsideOfNodes loopTiles
     print loopTiles
     print outside
-    let tilesFound = Set.filter (`notElem` loopTiles) (bfsFill lines loopTiles [outside] Set.empty)
+    let tilesFound = Set.filter (`notElem` loopTiles) (bfsFill filledLines loopTiles [outside] Set.empty)
     print tilesFound
     putStrLn (visualizeTileSet lines 0 (Set.toList tilesFound))
     print "---"
     putStrLn (visualizeTileSet lines 0 loopTiles)
     print "---"
-    let totalArea = (length lines) * (length (head lines))
+    let totalArea = (length filledLines) * (length (head filledLines))
     let result = totalArea - (Set.size tilesFound) - (length loopTiles)
     print result
 
