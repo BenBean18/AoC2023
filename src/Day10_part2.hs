@@ -224,7 +224,7 @@ bfsFill :: [String] -> [Coord] -> [Coord] -> Set.Set Coord -> Set.Set Coord
 bfsFill chars tiles [] visited = visited
 bfsFill chars tiles (current:coords) visited =
     let neighbors = filter (\c -> (c `notElem` tiles) && c `Set.notMember` visited) (neighboringCoords chars current) in
-        bfsFill chars tiles (coords ++ neighbors) (foldl (flip Set.insert) visited neighbors)
+        (trace $ show (Set.size visited)) bfsFill chars tiles (coords ++ neighbors) (foldl (flip Set.insert) visited neighbors)
 
 replaceChar :: String -> Int -> Char -> String
 replaceChar s i c = (take i s) ++ [c] ++ (drop (i+1) s)
