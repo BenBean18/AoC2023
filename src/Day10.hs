@@ -169,12 +169,25 @@ dotTuples (x1,y1) (x2,y2) = x1 * x2 + y1 * y2
 areParallel :: Pipe -> Pipe -> Coord -> Bool
 areParallel p1 p2 c = (end p1) `dotTuples` (end p2) /= 0 && (end p1) `dotTuples` c /= 0 || (start p1) `dotTuples` (end p2) /= 0 && (end p2) `dotTuples` c /= 0 || (end p1) `dotTuples` (start p2) /= 0 && (end p1) `dotTuples` c /= 0 || (start p1) `dotTuples` (start p2) /= 0 && (start p1) `dotTuples` c /= 0
 
+perpendicular :: Coord -> Coord
+perpendicular (x,y) = (y,-x)
+
+canMove :: [String] -> [Coord] -> Coord -> Coord -> Bool
+canMove chars tiles toCheck current =
+    let direction = toCheck `sub` current
+        tile1 = current `add` direction
+        tile2 = (current `add` direction) `add` (perpendicular direction) 
+        pipe1 = fromChar $ charAt chars tile1
+        pipe2 = fromChar $ charAt chars tile2 in
+            if isJust pipe1 && isJust pipe2 then areParallel (fromJust pipe1) (fromJust pipe2) direction else False
+
+-- Check if parallel to other neighboring ones w.r.t. 
 -- Can move to all neighboring non-pipe tiles
 -- (ignoring sliding between pipes for now)
 bfsFill :: [String] -> [Coord] -> [Coord] -> Set.Set Coord -> Set.Set Coord
 bfsFill chars tiles [] visited = visited
 bfsFill chars tiles (current:coords) visited =
-    let neighbors = filter (\c -> c `notElem` tiles && c `Set.notMember` visited) (neighboringCoords chars current) in
+    let neighbors = filter (\c -> (c `notElem` tiles || canMove chars tiles c current) && c `Set.notMember` visited) (neighboringCoords chars current) in
         bfsFill chars tiles (coords ++ neighbors) (foldl (flip Set.insert) visited neighbors)
 
 replaceChar :: String -> Int -> Char -> String
@@ -193,7 +206,7 @@ part2' lines =
         (Node coord nodes) = parseGraph lines Set.empty start
         loopTiles = coordOf (last nodes) : (coord : tilesOfLoop (head nodes))
         outside = tileOutsideOfNodes loopTiles
-        tilesFound = bfsFill lines loopTiles [outside] Set.empty in do
+        tilesFound = Set.filter (`notElem` loopTiles) (bfsFill lines loopTiles [outside] Set.empty) in do
             print tilesFound
             putStrLn (visualizeTileSet lines 0 (Set.toList tilesFound))
 
