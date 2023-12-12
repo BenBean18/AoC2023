@@ -51,7 +51,8 @@ applyMap range rangeMap =
     let keys = Map.keys rangeMap
         vals = Map.elems rangeMap
         intersectingRanges = map (rangeIntersection range) keys
-        mappedRanges = filter (\r -> rangeLength r /= 0) (concat (map (\inter -> map (correspondingRange inter) (zip keys vals)) (filter (\r -> rangeLength r /= 0) intersectingRanges))) in mappedRanges
+        mappedRanges = filter (\r -> rangeLength r /= 0) (concat (map (\inter -> map (correspondingRange inter) (zip keys vals)) (filter (\r -> rangeLength r /= 0) intersectingRanges))) in
+            if length mappedRanges > 0 then mappedRanges else [range]
 
 parseLine :: String -> RangeMap -> RangeMap
 parseLine s m =
@@ -59,13 +60,26 @@ parseLine s m =
         dst = read (head splot) :: Int
         src = read (splot !! 1) :: Int
         len = read (splot !! 2) :: Int in
-            Map.insert (Range src (src + len)) (Range dst (dst + len)) m
+            Map.insert (Range src (src + len - 1)) (Range dst (dst + len - 1)) m
 
 parseLines :: String -> RangeMap
 parseLines s = foldl (flip parseLine) Map.empty (splitOn "\n" s)
 
-parseSeeds :: String -> [Int]
-parseSeeds str = map (\s -> (read (head s) :: Int)) (str =~ "(\\d+)" :: [[String]])
+parseSeeds :: String -> [Range]
+parseSeeds str = map (\s -> (Range (read (head (splitOn " " (head s))) :: Int) ((read (head (splitOn " " (head s))) :: Int)+(read (last (splitOn " " (head s))) :: Int)-1))) (str =~ "(\\d+) (\\d+)" :: [[String]])
+
+applyMaps :: Range -> [RangeMap] -> [Range]
+applyMaps r [] = []
+applyMaps r (m:ms) = applyMap r m ++ concatMap (\range -> applyMaps range ms) (applyMap r m)
+
+start :: Range -> Int
+start (Range s _) = s
+
+end :: Range -> Int
+end (Range _ e) = e
+
+minimumOfRanges :: [Range] -> Int
+minimumOfRanges ranges = minimum (map start ranges)
 
 -- applyMap :: RangeMap -> RangeMap -> [RangeMap]
 -- applyMap existing new = 
@@ -75,4 +89,7 @@ type RangeMap = Map.Map Range Range
 part2' lines text = do
     let seeds = parseSeeds (head lines)
     let maps = map parseLines (tail (map (head . splitOn "\n\n") (splitOn ":\n" text)))
-    print maps
+    let mappedSeeds = concatMap ((flip applyMaps) maps) seeds
+    let minimumLocation = minimumOfRanges mappedSeeds
+    print seeds
+    print minimumLocation
