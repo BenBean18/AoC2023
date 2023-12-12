@@ -53,11 +53,26 @@ applyMap range rangeMap =
         intersectingRanges = map (rangeIntersection range) keys
         mappedRanges = filter (\r -> rangeLength r /= 0) (concat (map (\inter -> map (correspondingRange inter) (zip keys vals)) (filter (\r -> rangeLength r /= 0) intersectingRanges))) in mappedRanges
 
+parseLine :: String -> RangeMap -> RangeMap
+parseLine s m =
+    let splot = splitOn " " s
+        dst = read (head splot) :: Int
+        src = read (splot !! 1) :: Int
+        len = read (splot !! 2) :: Int in
+            Map.insert (Range src (src + len)) (Range dst (dst + len)) m
 
+parseLines :: String -> RangeMap
+parseLines s = foldl (flip parseLine) Map.empty (splitOn "\n" s)
+
+parseSeeds :: String -> [Int]
+parseSeeds str = map (\s -> (read (head s) :: Int)) (str =~ "(\\d+)" :: [[String]])
 
 -- applyMap :: RangeMap -> RangeMap -> [RangeMap]
 -- applyMap existing new = 
 
 type RangeMap = Map.Map Range Range
 
-part2' lines = print "Hi"
+part2' lines text = do
+    let seeds = parseSeeds (head lines)
+    let maps = map parseLines (tail (map (head . splitOn "\n\n") (splitOn ":\n" text)))
+    print maps

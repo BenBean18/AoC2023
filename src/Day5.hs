@@ -69,4 +69,5 @@ part2' = Day5_part2.part2'
 -- Part 2
 part2 = do
     lines <- getLines "day5/input.txt"
-    part2' lines
+    text <- getText "day5/input.txt"
+    part2' lines text
