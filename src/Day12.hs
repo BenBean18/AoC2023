@@ -105,11 +105,16 @@ insertAt index number strs = concat (take index strs ++ [replicate number '#'] +
 
 -- Put t things in this group
 -- Then allocate t-1 things to put in other groups
--- Returns [(group, # of things)]
-insertionCombos :: Int -> Int -> Int -> [[(Int, Int)]]
-insertionCombos things groups thisGroup = 
+-- Returns [[# of things where index is group number]]
+insertionCombos' :: Int -> Int -> Int -> [[(Int, Int)]]
+insertionCombos' things groups thisGroup = 
     if groups == thisGroup then [[]] else
-    concatMap (\t -> map (\m -> (t, thisGroup) : m) (insertionCombos (things - t) groups (thisGroup + 1))) [0..things]
+    concatMap (\t -> map (\m -> (t, thisGroup) : m) (insertionCombos' (things - t) groups (thisGroup + 1))) [0..things]
+
+insertionCombos :: Int -> Int -> [[(Int, Int)]]
+insertionCombos things groups = 
+    let combos = insertionCombos' things groups 0
+        filteredCombos = filter (\allocations -> sum (map fst allocations) == things) combos in filteredCombos
 
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
