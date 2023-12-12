@@ -101,10 +101,10 @@ makeBlockList :: [Int] -> [String]
 makeBlockList combo = 
     let blocks = map (tail . makeBlock) combo in (init blocks ++ [init (last blocks)])
 
-insertAt :: Int -> Int -> [String] -> [String]
-insertAt index number strs = 
-    if index > 0 then let before = take index strs in (init before ++ [last before ++ (replicate number '#')]) ++ drop index strs
-    else let after = drop index strs in ([(replicate number '#') ++ head after]) ++ tail after
+insertAt :: Int -> Int -> Char -> [String] -> [String]
+insertAt index number c strs = 
+    if index > 0 then let before = take index strs in (init before ++ [last before ++ (replicate number c)]) ++ drop index strs
+    else let after = drop index strs in ([(replicate number c) ++ head after]) ++ tail after
 
 -- Put t things in this group
 -- Then allocate t-1 things to put in other groups
@@ -127,7 +127,7 @@ allPossibilities s combo =
         things = length s - baseLength
         insertionGroups = insertionCombos things groups
         insertionGroupsAndIndices = map (\g -> zip g [0..(length g - 1)]) insertionGroups
-        possibilities = (map (\g -> (concat $ foldl (\current (things, index) -> {-(trace $ "\n" ++ (concat current) ++ "\n")-} insertAt index things current) blocks g)) insertionGroupsAndIndices) in
+        possibilities = (concatMap (\g -> [(concat $ foldl (\current (things, index) -> insertAt index things '#' current) blocks g),(concat $ foldl (\current (things, index) -> insertAt index things '.' current) blocks g)]) insertionGroupsAndIndices) in
             (trace $ show insertionGroupsAndIndices ++ " " ++ show blocks ++ " " ++ show baseLength ++ " " ++ show things ++ " " ++ show (length possibilities)) possibilities
 
 matches :: String -> String -> Bool
