@@ -26,14 +26,10 @@ regexFor :: Int -> String
 regexFor i = "\\.+#{" ++ show i ++ "}"
 
 fitsPattern :: String -> [Int] -> Bool
-fitsPattern record combo =
-    let originalRegex = concatMap regexFor combo
-        regex = originalRegex ++ "\\.+"
-        matches = (('.' : (record ++ ".")) =~ regex :: [[String]]) in
-            ((not (null matches) && not (null (head matches))) && (length (head (head matches)) == (length record + 2)))
+fitsPattern record combo = combo == map length (wordsBy (== '.') record)
 
 numPossibilities :: String -> [Int] -> Int
-numPossibilities record combo = length (filter id (map (`fitsPattern` combo) (allCombinationsFor record)))
+numPossibilities record combo = genericLength (filter id (map (`fitsPattern` combo) (allCombinationsFor record)))
 
 numPossibilitiesForLine :: String -> Int
 numPossibilitiesForLine s =
@@ -50,7 +46,19 @@ part1 = do
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+
+numPossibilitiesForLineUnfolded :: String -> Int
+numPossibilitiesForLineUnfolded s =
+    let splot = words s
+        record = head splot
+        combo = map (\s -> read s :: Int) (splitOn "," (last splot))
+        (uRecord, uCombo) = unfold record combo in numPossibilities uRecord uCombo
+
+unfold :: String -> [Int] -> (String, [Int])
+unfold str combo = (concat (intersperse "?" (replicate 5 str)), concat (replicate 5 combo))
+
+part2' lines = 
+    let result = sum $ map numPossibilitiesForLineUnfolded lines in print result
 
 part2 = do
     lines <- getLines "day12/input.txt"
