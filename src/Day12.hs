@@ -102,7 +102,9 @@ makeBlockList combo =
     let blocks = map (tail . makeBlock) combo in (init blocks ++ [init (last blocks)])
 
 insertAt :: Int -> Int -> [String] -> [String]
-insertAt index number strs = (take index strs ++ [replicate number '#'] ++ drop index strs)
+insertAt index number strs = 
+    if index > 0 then let before = take index strs in (init before ++ [last before ++ (replicate number '#')]) ++ drop index strs
+    else let after = drop index strs in ([(replicate number '#') ++ head after]) ++ tail after
 
 -- Put t things in this group
 -- Then allocate t-1 things to put in other groups
@@ -125,8 +127,11 @@ allPossibilities s combo =
         things = length s - baseLength
         insertionGroups = insertionCombos things groups
         insertionGroupsAndIndices = map (\g -> zip g [0..(length g - 1)]) insertionGroups
-        possibilities = (map (\g -> (concat $ foldl (\current (things, group) -> insertAt group things current) blocks g)) insertionGroupsAndIndices) in
+        possibilities = (map (\g -> (concat $ foldl (\current (things, index) -> {-(trace $ "\n" ++ (concat current) ++ "\n")-} insertAt index things current) blocks g)) insertionGroupsAndIndices) in
             (trace $ show insertionGroupsAndIndices ++ " " ++ show blocks ++ " " ++ show baseLength ++ " " ++ show things ++ " " ++ show (length possibilities)) possibilities
+
+matches :: String -> String -> Bool
+matches string condition = (map (\(c, i) -> if c == '?' then string !! i else c) (zip condition [0..length condition-1])) == string
 
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
