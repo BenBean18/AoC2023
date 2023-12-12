@@ -57,6 +57,12 @@ part1 = do
 -- 8 of them have to be #s (since 1+1+1+5 = 8)
 -- 11-8 = 3 so we now know the number of characters we can manipulate
 -- 3 ., 8 #, 3 ?
+-- Also, the string ".#" has to appear 3 times (and potentially 4, but it could start with just "#")
+-- These things have to be in the output in this order (potentially overlapping)
+-- #.
+-- .#.
+-- .#.
+-- .#####
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
     let splot = words s
