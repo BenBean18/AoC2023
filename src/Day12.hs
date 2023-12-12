@@ -46,7 +46,17 @@ part1 = do
     part1' lines
 
 -- Part 2
-
+-- Try possible combinations splitting on each dot character
+-- ...but that is super not optimal on something like this "?????????????? 1,1,1,5"
+-- (14 question marks)
+-- Maybe compute the # of possibilities for all question marks?
+-- And then see what the restrictions are
+-- We can also see how many '.' characters there are at minimum by seeing # of groups
+-- e.g. with the all ? input, there are 4 groups -> need at least 3 dots
+-- which means there are 14-3 = 11 characters we can manipulate
+-- 8 of them have to be #s (since 1+1+1+5 = 8)
+-- 11-8 = 3 so we now know the number of characters we can manipulate
+-- 3 ., 8 #, 3 ?
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
     let splot = words s
