@@ -38,7 +38,7 @@ numPossibilitiesForLine s =
         combo = map (\s -> read s :: Int) (splitOn "," (last splot)) in numPossibilities record combo
 
 -- Part 1
-part1' lines = 
+part1' lines =
     let result = sum $ map numPossibilitiesForLine lines in print result
 
 part1 = do
@@ -98,10 +98,18 @@ makeBlock :: Int -> String
 makeBlock i = "." ++ replicate i '#' ++ "."
 
 makeBlockList :: [Int] -> [String]
-makeBlockList combo = 
-    let blocks = map makeBlock combo
-        blocks1 = (tail (head blocks)) : (tail blocks)
-        blocks2 = (init blocks1) ++ [init (last blocks1)] in blocks2
+makeBlockList = map (tail . makeBlock)
+
+insertAt :: Int -> Int -> [String] -> String
+insertAt index number strs = concat (take index strs ++ [replicate number '#'] ++ drop index strs)
+
+-- Put t things in this group
+-- Then allocate t-1 things to put in other groups
+-- Returns [(group, # of things)]
+insertionCombos :: Int -> Int -> Int -> [[(Int, Int)]]
+insertionCombos things groups thisGroup = 
+    if groups == thisGroup then [[]] else
+    concatMap (\t -> map (\m -> (t, thisGroup) : m) (insertionCombos (things - t) groups (thisGroup + 1))) [0..things]
 
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
@@ -113,7 +121,7 @@ numPossibilitiesForLineUnfolded s =
 unfold :: String -> [Int] -> (String, [Int])
 unfold str combo = (concat (intersperse "?" (replicate 5 str)), concat (replicate 5 combo))
 
-part2' lines = 
+part2' lines =
     let result = sum $ map numPossibilitiesForLineUnfolded lines in print result
 
 part2 = do
