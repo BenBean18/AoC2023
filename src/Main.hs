@@ -12,6 +12,7 @@ import qualified Day8
 import qualified Day9
 import qualified Day10
 import qualified Day11
+import qualified Day12
 
 main :: IO ()
 main = do
@@ -31,6 +32,7 @@ main = do
                     else if day == 9 then Day9.part1
                     else if day == 10 then Day10.part1
                     else if day == 11 then Day11.part1
+                    else if day == 12 then Day12.part1
                     else putStrLn "I haven't solved that yet (or it doesn't exist)"
                 else if part == "2" then
                     if day == 1 then Day1.part2
@@ -44,6 +46,7 @@ main = do
                     else if day == 9 then Day9.part2
                     else if day == 10 then Day10.part2
                     else if day == 11 then Day11.part2
+                    else if day == 12 then Day12.part2
                     else putStrLn "I haven't solved that yet (or it doesn't exist)"
                 else if part == "b" then
                     if day == 1 then Day1.benchmark
@@ -57,6 +60,7 @@ main = do
                     else if day == 9 then Day9.benchmark
                     else if day == 10 then Day10.benchmark
                     else if day == 11 then Day11.benchmark
+                    else if day == 12 then Day12.benchmark
                     else putStrLn "Not benchmarked"
                 else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
     else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
