@@ -52,17 +52,17 @@ parseSeeds str = map (\s -> (read (head s) :: Int)) (str =~ "(\\d+)" :: [[String
 combineMaps :: [AlMap] -> AlMap
 combineMaps = foldl (\existing new -> (\i -> (new (existing i)))) emptyMap
 
-part1' lines = print "Hi"
+part1' lines text = do
+    let seeds = parseSeeds (head lines)
+    let maps = map parseLines (tail (map (head . splitOn "\n\n") (splitOn ":\n" text)))
+    let combined = combineMaps maps
+    print $ minimum $ map combined seeds
 
 -- Part 1
 part1 = do
     lines <- getLines "day5/input.txt"
     text <- getText "day5/input.txt"
-    let seeds = parseSeeds (head lines)
-    let maps = map parseLines (tail (map (head . splitOn "\n\n") (splitOn ":\n" text)))
-    let combined = combineMaps maps
-    print $ minimum $ map combined seeds
-    part1' lines
+    part1' lines text
 
 part2' = Day5_part2.part2'
 
@@ -71,3 +71,14 @@ part2 = do
     lines <- getLines "day5/input.txt"
     text <- getText "day5/input.txt"
     part2' lines text
+
+time lines text =
+    withArgs ["--output", "day5.html"] $ defaultMain [
+        bench "part1" $ nfIO $ part1' lines text
+      , bench "part2" $ nfIO $ part2' lines text
+    ]
+
+benchmark = do
+    lines <- getLines "day5/input.txt"
+    text <- getText "day5/input.txt"
+    time lines text
