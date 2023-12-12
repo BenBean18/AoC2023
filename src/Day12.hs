@@ -75,8 +75,8 @@ part1 = do
 -- ?###???????? 3,2,1
 -- ###. (len 4)
 -- .##. (len 4)
--- .# (len 3)
--- 4+4+3 - 2 for overlap = 9 predetermined
+-- .# (len 2)
+-- 4+4+2 - 2 for overlap = 8 predetermined
 -- 12-9 = 3 to manipulate --> 360 arrangements...way too high
 
 -- Ok very simple case
@@ -98,10 +98,11 @@ makeBlock :: Int -> String
 makeBlock i = "." ++ replicate i '#' ++ "."
 
 makeBlockList :: [Int] -> [String]
-makeBlockList = map (tail . makeBlock)
+makeBlockList combo = 
+    let blocks = map (tail . makeBlock) combo in (init blocks ++ [init (last blocks)])
 
-insertAt :: Int -> Int -> [String] -> String
-insertAt index number strs = concat (take index strs ++ [replicate number '#'] ++ drop index strs)
+insertAt :: Int -> Int -> [String] -> [String]
+insertAt index number strs = (take index strs ++ [replicate number '#'] ++ drop index strs)
 
 -- Put t things in this group
 -- Then allocate t-1 things to put in other groups
@@ -115,6 +116,17 @@ insertionCombos :: Int -> Int -> [[Int]]
 insertionCombos things groups = 
     let combos = insertionCombos' things groups 0
         filteredCombos = filter (\allocations -> sum allocations == things) combos in filteredCombos
+
+allPossibilities :: String -> [Int] -> [String]
+allPossibilities s combo =
+    let blocks = makeBlockList combo
+        groups = length blocks + 1
+        baseLength = length (concat blocks)
+        things = length s - baseLength
+        insertionGroups = insertionCombos things groups
+        insertionGroupsAndIndices = map (\g -> zip g [0..(length g - 1)]) insertionGroups
+        possibilities = (map (\g -> (concat $ foldl (\current (things, group) -> insertAt group things current) blocks g)) insertionGroupsAndIndices) in
+            (trace $ show insertionGroupsAndIndices ++ " " ++ show blocks ++ " " ++ show baseLength ++ " " ++ show things ++ " " ++ show (length possibilities)) possibilities
 
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
