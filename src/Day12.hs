@@ -63,6 +63,8 @@ part1 = do
 -- .#. (len 3)
 -- .#. (len 3)
 -- .##### (len 5)
+-- #. .#. .#. .#####
+-- so without overlap it's I#.I#.I#.I#####I
 -- 2+3+3+5 - 3 for overlap = 10 characters predetermined
 -- There are 4 characters we can manipulate and they go into 4 groups
 -- (this will always be true, n = g)
@@ -76,6 +78,31 @@ part1 = do
 -- .# (len 3)
 -- 4+4+3 - 2 for overlap = 9 predetermined
 -- 12-9 = 3 to manipulate --> 360 arrangements...way too high
+
+-- Ok very simple case
+-- ???? 1,1 (#.#. #..# .#.# is 3 possibilities)
+-- also ????? 1,1 is 6 possibilities
+-- #. (len 2)
+-- .# (len 2)
+-- I#.I#I
+-- 2 + 2 - 1 for overlap = 3 characters predetermined
+-- 4 - 3 = 1 that we can change
+
+-- We can insert characters between groups (removing dots to account for overlap)
+
+-- so what are we actually doing
+-- 1 char -> 1 group is 0 1
+-- 2 characters -> 2 groups is 0 2, 2 0, 
+
+makeBlock :: Int -> String
+makeBlock i = "." ++ replicate i '#' ++ "."
+
+makeBlockList :: [Int] -> [String]
+makeBlockList combo = 
+    let blocks = map makeBlock combo
+        blocks1 = (tail (head blocks)) : (tail blocks)
+        blocks2 = (init blocks1) ++ [init (last blocks1)] in blocks2
+
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
     let splot = words s
