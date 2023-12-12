@@ -59,10 +59,23 @@ part1 = do
 -- 3 ., 8 #, 3 ?
 -- Also, the string ".#" has to appear 3 times (and potentially 4, but it could start with just "#")
 -- These things have to be in the output in this order (potentially overlapping)
--- #.
--- .#.
--- .#.
--- .#####
+-- #. (len 2)
+-- .#. (len 3)
+-- .#. (len 3)
+-- .##### (len 5)
+-- 2+3+3+5 - 3 for overlap = 10 characters predetermined
+-- There are 4 characters we can manipulate and they go into 4 groups
+-- (this will always be true, n = g)
+-- https://math.stackexchange.com/questions/47345/number-of-ways-of-distributing-n-identical-objects-among-r-groups
+-- (n + g - 1)! / (g - 1)!(n + g - 1 - g + 1)! = (n + g - 1)! / (g - 1)!n! = (2n - 1)! / (n-1)!n!
+-- in this case, that's (7!)/(3!)(4!) = 35 arrangements
+
+-- ?###???????? 3,2,1
+-- ###. (len 4)
+-- .##. (len 4)
+-- .# (len 3)
+-- 4+4+3 - 2 for overlap = 9 predetermined
+-- 12-9 = 3 to manipulate --> 360 arrangements...way too high
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
     let splot = words s
