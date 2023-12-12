@@ -69,8 +69,8 @@ parseSeeds :: String -> [Range]
 parseSeeds str = map (\s -> (Range (read (head (splitOn " " (head s))) :: Int) ((read (head (splitOn " " (head s))) :: Int)+(read (last (splitOn " " (head s))) :: Int)-1))) (str =~ "(\\d+) (\\d+)" :: [[String]])
 
 applyMaps :: Range -> [RangeMap] -> [Range]
-applyMaps r [] = []
-applyMaps r (m:ms) = applyMap r m ++ concatMap (\range -> applyMaps range ms) (applyMap r m)
+applyMaps r [] = [r]
+applyMaps r (m:ms) = concatMap (\range -> applyMaps range ms) (applyMap r m)
 
 start :: Range -> Int
 start (Range s _) = s
@@ -91,5 +91,4 @@ part2' lines text = do
     let maps = map parseLines (tail (map (head . splitOn "\n\n") (splitOn ":\n" text)))
     let mappedSeeds = concatMap ((flip applyMaps) maps) seeds
     let minimumLocation = minimumOfRanges mappedSeeds
-    print seeds
     print minimumLocation
