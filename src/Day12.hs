@@ -52,31 +52,33 @@ part1 = do
 numValid :: String -> [Int] -> Int -> Int
 numValid s [] _ = if all (\x -> x == '.' || x == '?') s then 1 else 0
 numValid [] (condition:[]) blockSize = if (blockSize == condition) then 1 else 0
-numValid (x:xs) (condition:conditions) currentBlockSize = (trace $ show x ++ " " ++ show xs ++ " " ++ show condition ++ " " ++ show currentBlockSize) (
+numValid (x:xs) (condition:conditions) currentBlockSize = {-(trace $ show x ++ " " ++ show xs ++ " " ++ show condition ++ " " ++ show currentBlockSize)-} (
     if x == '.' then numValid xs (condition:conditions) 0
     else if x == '#' && (length xs > 0) && (head xs) == '.' then
         -- end of combo (this is #, next is .)
         let currentCombo = currentBlockSize + 1 in
             if condition /= currentCombo then 0 else numValid (tail xs) conditions 0
     else if x == '#' && (length xs > 0) && (head xs) == '?' then
-        -- end of combo and at the same time continuing the combo
-        (trace "hi") (let currentCombo = currentBlockSize + 1 in if condition /= currentCombo then 0 else numValid (tail xs) conditions 0) + numValid (tail xs) (condition:conditions) (currentBlockSize + 2)
-    else if x == '#' then (trace "hello") numValid xs (condition:conditions) (currentBlockSize + 1)
+        -- end of combo ('?' == '.')
+        {-(trace "hi")-} (let currentCombo = currentBlockSize + 1 in if condition /= currentCombo then 0 else numValid ('.' : tail xs) conditions 0) +
+        -- continue combo ('?' == '#')
+        numValid ('#' : tail xs) (condition:conditions) (currentBlockSize + 1)
+    else if x == '#' then {-(trace "hello")-} numValid xs (condition:conditions) (currentBlockSize + 1)
     else numValid ('.' : xs) (condition:conditions) currentBlockSize + numValid ('#' : xs) (condition:conditions) currentBlockSize)
-numValid _ _ _ = 0
+numValid x y _ = {-(trace $ show x ++ " " ++ show y ++ "----------")-} 0 -- catch
 
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
     let splot = words s
         record = head splot
         combo = map (\s -> read s :: Int) (splitOn "," (last splot))
-        (uRecord, uCombo) = unfold record combo in numPossibilities uRecord uCombo
+        (uRecord, uCombo) = unfold record combo in numValid uRecord uCombo 0
 
 unfold :: String -> [Int] -> (String, [Int])
 unfold str combo = (concat (intersperse "?" (replicate 5 str)), concat (replicate 5 combo))
 
 part2' lines =
-    let result = sum $ map numPossibilitiesForLineUnfolded lines in print result
+    let result = sum $ map (\s -> (trace s) numPossibilitiesForLineUnfolded s) lines in print result
 
 part2 = do
     lines <- getLines "day12/input.txt"
