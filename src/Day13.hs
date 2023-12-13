@@ -1,9 +1,8 @@
 module Day13 where
 
 import Utilities
-import Data.List.Split (splitOn)
+import Data.List.Split (splitOn, chunksOf)
 import Data.List ()
-import Data.Text (pack, unpack, replace, isInfixOf)
 import Text.Regex.Base
 import Text.Regex.PCRE
 import Data.Array ((!))
@@ -44,7 +43,7 @@ transpose strs = map (columnAt strs) [0..length (head strs)-1]
 -- NOTE: has to be BETWEEN two rows, can't be a row. so we can just assert that length is even
 findLineOfReflectionOneWay :: (Eq a, Show a) => [a] -> [a] -> [a] -> Int
 findLineOfReflectionOneWay [] _ _ = 0
-findLineOfReflectionOneWay (line:lines) stack queue = 
+findLineOfReflectionOneWay (line:lines) stack queue =
     let newStack = stack ++ [line]
         newQueue = line : queue in {-(trace $ show newStack ++ " " ++ show newQueue)-} (
             if (length newStack > 1) && ((.&.) (length newStack) 1 == 0) && newStack == newQueue then length newStack `div` 2
@@ -76,7 +75,30 @@ part1 = do
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+-- https://stackoverflow.com/questions/20156078/replacing-an-element-in-a-list-of-lists-in-haskell
+replace :: (a -> a) -> Int -> [a] -> [a]
+replace f 0 (x:xs) = (f x):xs
+replace f i (x:xs) = x : replace f (i-1) xs
+replace f i [] = []
+
+allPossibleLineSmudges :: String -> Int -> [String]
+allPossibleLineSmudges str i =
+    if i >= (length str) then [] else let c = str !! i in
+    replace (const (if c == '.' then '#' else '.')) i str : allPossibleLineSmudges str (i+1)
+
+allPossibleSmudges :: [String] -> [[String]]
+allPossibleSmudges lines = map (chunksOf (length (head lines))) (allPossibleLineSmudges (concat lines) 0)
+
+summarizeNoteWithout :: [String] -> [String] -> Int
+summarizeNoteWithout ignore lines = summarizeNote lines - summarizeNote ignore
+
+part2' lines =
+    let firstNote = head $ splitOn [""] lines
+        summaries = map (summarizeNoteWithout firstNote) (allPossibleSmudges firstNote)
+        result = sum (filter (>0) summaries) in do
+        putStrLn $ concatMap (\s -> s ++ "\n") (map (concatMap (\s -> s ++ "\n")) $ allPossibleSmudges firstNote)
+        print summaries
+        print result
 
 part2 = do
     lines <- getLines "day13/input.txt"
