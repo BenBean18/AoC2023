@@ -81,6 +81,17 @@ replace f 0 (x:xs) = (f x):xs
 replace f i (x:xs) = x : replace f (i-1) xs
 replace f i [] = []
 
+findLineOfReflectionIgnoring :: (Eq a, Show a) => [a] -> Int -> Int
+findLineOfReflectionIgnoring lines ignore =
+    let topToBottomOld = findLineOfReflectionOneWay lines [] []
+        bottomToTopOld = findLineOfReflectionOneWay (reverse lines) [] []
+        topToBottom = if ignore == topToBottomOld then 0 else topToBottomOld
+        bottomToTop = if (length lines - ignore) == bottomToTopOld then 0 else bottomToTopOld in
+            if topToBottom /= 0 && bottomToTop /= 0 then error (show lines ++ "two reflection lines??? top to bottom: " ++ show topToBottom ++ " bottomToTop: " ++ show bottomToTop)
+            else if topToBottom /= 0 then topToBottom
+            else if bottomToTop /= 0 then (length lines) - bottomToTop
+            else 0
+
 allPossibleLineSmudges :: String -> Int -> [String]
 allPossibleLineSmudges str i =
     if i >= (length str) then [] else let c = str !! i in
@@ -90,14 +101,16 @@ allPossibleSmudges :: [String] -> [[String]]
 allPossibleSmudges lines = map (chunksOf (length (head lines))) (allPossibleLineSmudges (concat lines) 0)
 
 summarizeNoteWithout :: [String] -> [String] -> Int
-summarizeNoteWithout ignore lines = summarizeNote lines - summarizeNote ignore
+summarizeNoteWithout ignore lines =
+    let ignoredRowsAbove = findLineOfReflection ignore
+        rowsAbove = findLineOfReflectionIgnoring lines ignoredRowsAbove
+        ignoredColumnsToLeft = findLineOfReflection (transpose ignore)
+        columnsToLeft = findLineOfReflectionIgnoring (transpose lines) ignoredColumnsToLeft in columnsToLeft + (100 * rowsAbove)
 
 part2' lines =
-    let firstNote = head $ splitOn [""] lines
-        summaries = map (summarizeNoteWithout firstNote) (allPossibleSmudges firstNote)
-        result = sum (filter (>0) summaries) in do
-        putStrLn $ concatMap (\s -> s ++ "\n") (map (concatMap (\s -> s ++ "\n")) $ allPossibleSmudges firstNote)
-        print summaries
+    let splot = splitOn [""] lines
+        summaries = map (\note -> map (summarizeNoteWithout note) (allPossibleSmudges note)) splot
+        result = sum (map (\summary -> head (filter (>0) summary)) summaries) in do
         print result
 
 part2 = do
