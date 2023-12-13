@@ -19,6 +19,12 @@ import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique, uniq)
 
+import Data.Function.Memoize
+
+import Data.IORef
+import GHC.IO.Unsafe (unsafePerformIO)
+import Data.Functor.Identity (Identity)
+
 allCombinationsFor :: String -> [String]
 allCombinationsFor [c] = if c == '?' then [".","#"] else [[c]]
 allCombinationsFor (c:str) =
@@ -49,36 +55,61 @@ part1 = do
 -- Ignore previous ones
 -- Ignore dots
 
-numValid :: String -> [Int] -> Int -> Int
-numValid s [] _ = if all (\x -> x == '.' || x == '?') s then 1 else 0
-numValid [] (condition:[]) blockSize = if (blockSize == condition) then 1 else 0
-numValid (x:xs) (condition:conditions) currentBlockSize = {-(trace $ show x ++ " " ++ show xs ++ " " ++ show condition ++ " " ++ show currentBlockSize)-} (
-    if x == '.' then numValid xs (condition:conditions) 0
-    else if x == '#' && (length xs > 0) && (head xs) == '.' then
-        -- end of combo (this is #, next is .)
-        let currentCombo = currentBlockSize + 1 in
-            if condition /= currentCombo then 0 else numValid (tail xs) conditions 0
-    else if x == '#' && (length xs > 0) && (head xs) == '?' then
-        -- end of combo ('?' == '.')
-        {-(trace "hi")-} (let currentCombo = currentBlockSize + 1 in if condition /= currentCombo then 0 else numValid ('.' : tail xs) conditions 0) +
-        -- continue combo ('?' == '#')
-        numValid ('#' : tail xs) (condition:conditions) (currentBlockSize + 1)
-    else if x == '#' then {-(trace "hello")-} numValid xs (condition:conditions) (currentBlockSize + 1)
-    else numValid ('.' : xs) (condition:conditions) currentBlockSize + numValid ('#' : xs) (condition:conditions) currentBlockSize)
-numValid x y _ = {-(trace $ show x ++ " " ++ show y ++ "----------")-} 0 -- catch
+{-# NOINLINE memo_table #-}
+memo_table :: IORef (Map.Map (String, Int) Int)
+memo_table = unsafePerformIO (newIORef mempty)
+
+numValid :: String -> Int -> [Int] -> Int
+numValid s 0 [] = if all (\x -> x == '.' || x == '?') s then 1 else 0
+numValid [] charsLeft [] = if (charsLeft == 0) then 1 else 0
+numValid (x:xs) charsLeft conditions =
+    if charsLeft < 0 then 0 else 
+    let memoMap = unsafePerformIO (readIORef memo_table)
+        memoizedValue = Map.findWithDefault (-1) ((x:xs), charsLeft) memoMap in
+            if memoizedValue /= -1 then (trace $ show memoizedValue) memoizedValue else {-(trace $ show (x:xs, charsLeft) ++ "--")-}
+    {-(trace $ show x ++ " " ++ show xs ++ " " ++ show charsLeft)-} (
+        (if x == '.' then numValidStored xs charsLeft conditions
+        else if x == '#' && (length xs > 0) && (head xs) == '.' then
+            -- end of combo (this is #, next is .)
+            if charsLeft /= 1 then 0 else numValidStored (tail xs) (if (length conditions) > 0 then head conditions else 0) (if (length conditions) > 0 then tail conditions else [])
+        else if x == '#' && (length xs > 0) && (head xs) == '?' then
+            -- end of combo ('?' == '.')
+            {-(trace "hi")-} (if charsLeft /= 1 then 0 else numValidStored (tail xs) (if (length conditions) > 0 then head conditions else 0) (if (length conditions) > 0 then tail conditions else [])) +
+            -- continue combo ('?' == '#')
+            numValidStored ('#' : tail xs) (charsLeft - 1) conditions
+        else if x == '#' then {-(trace "hello")-} numValidStored xs (charsLeft - 1) conditions
+        else numValidStored ('.' : xs) charsLeft conditions + numValidStored ('#' : xs) charsLeft conditions))
+numValid x a y = {-(trace $ show x ++ " " ++ show y ++ "----------")-} 0 -- catch
+
+numValidStored' :: String -> Int -> [Int] -> Int
+numValidStored' a1 a2 a3 =
+    unsafePerformIO $ do
+        currentTable <- (readIORef memo_table)
+        let returnedGood = Map.findWithDefault (-1) (a1, a2) currentTable
+        let returned = if returnedGood /= -1 then returnedGood else numValid a1 a2 a3
+        let newMemoTable = Map.insert (a1,a2) returned currentTable
+        -- putStrLn "wrote io ref"
+        -- print (a1,a2)
+        print (Map.size newMemoTable)
+        writeIORef memo_table newMemoTable
+        return returned
+
+numValidStored a b c = numValidStored' a b c
+
+-- ideally want to memoize (charsLeft, nextBlock)
 
 numPossibilitiesForLineUnfolded :: String -> Int
 numPossibilitiesForLineUnfolded s =
     let splot = words s
         record = head splot
         combo = map (\s -> read s :: Int) (splitOn "," (last splot))
-        (uRecord, uCombo) = unfold record combo in numValid uRecord uCombo 0
+        (uRecord, uCombo) = unfold record combo in (numValid) uRecord (head uCombo) (tail uCombo)
 
 unfold :: String -> [Int] -> (String, [Int])
 unfold str combo = (concat (intersperse "?" (replicate 5 str)), concat (replicate 5 combo))
 
 part2' lines =
-    let result = sum $ map (\s -> (trace s) numPossibilitiesForLineUnfolded s) lines in print result
+    let result = sum $ map (\s -> let p = numPossibilitiesForLineUnfolded s in (trace $ show s ++ " " ++ show p) p) lines in print result
 
 part2 = do
     lines <- getLines "day12/input.txt"
@@ -93,3 +124,5 @@ time lines =
 benchmark = do
     lines <- getLines "day12/input.txt"
     time lines
+
+-- 525036306524095649 too high
