@@ -56,7 +56,7 @@ part1 = do
 -- Ignore dots
 
 {-# NOINLINE memo_table #-}
-memo_table :: IORef (Map.Map (String, Int) Int)
+memo_table :: IORef (Map.Map (String, Int, [Int]) Int)
 memo_table = unsafePerformIO (newIORef mempty)
 
 numValid :: String -> Int -> [Int] -> Int
@@ -64,10 +64,7 @@ numValid s 0 [] = if all (\x -> x == '.' || x == '?') s then 1 else 0
 numValid [] charsLeft [] = if (charsLeft == 0) then 1 else 0
 numValid (x:xs) charsLeft conditions =
     if charsLeft < 0 then 0 else 
-    let memoMap = unsafePerformIO (readIORef memo_table)
-        memoizedValue = Map.findWithDefault (-1) ((x:xs), charsLeft) memoMap in
-            if memoizedValue /= -1 then (trace $ show memoizedValue) memoizedValue else {-(trace $ show (x:xs, charsLeft) ++ "--")-}
-    {-(trace $ show x ++ " " ++ show xs ++ " " ++ show charsLeft)-} (
+    (trace $ show x ++ " " ++ show xs ++ " " ++ show charsLeft) (
         (if x == '.' then numValidStored xs charsLeft conditions
         else if x == '#' && (length xs > 0) && (head xs) == '.' then
             -- end of combo (this is #, next is .)
@@ -85,9 +82,9 @@ numValidStored' :: String -> Int -> [Int] -> Int
 numValidStored' a1 a2 a3 =
     unsafePerformIO $ do
         currentTable <- (readIORef memo_table)
-        let returnedGood = Map.findWithDefault (-1) (a1, a2) currentTable
-        let returned = if returnedGood /= -1 then returnedGood else numValid a1 a2 a3
-        let newMemoTable = Map.insert (a1,a2) returned currentTable
+        let returnedGood = Map.findWithDefault (-10) (a1, a2, a3) currentTable
+        let returned = if returnedGood /= -10 then returnedGood else numValid a1 a2 a3
+        let newMemoTable = Map.insert (a1,a2,a3) returned currentTable
         -- putStrLn "wrote io ref"
         -- print (a1,a2)
         print (Map.size newMemoTable)
