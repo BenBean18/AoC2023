@@ -64,7 +64,7 @@ numValid s 0 [] = if all (\x -> x == '.' || x == '?') s then 1 else 0
 numValid [] charsLeft [] = if (charsLeft == 0) then 1 else 0
 numValid (x:xs) charsLeft conditions =
     if charsLeft < 0 then 0 else 
-    (trace $ show x ++ " " ++ show xs ++ " " ++ show charsLeft) (
+    {-(trace $ show x ++ " " ++ show xs ++ " " ++ show charsLeft)-} (
         (if x == '.' then numValidStored xs charsLeft conditions
         else if x == '#' && (length xs > 0) && (head xs) == '.' then
             -- end of combo (this is #, next is .)
@@ -87,7 +87,7 @@ numValidStored' a1 a2 a3 =
         let newMemoTable = Map.insert (a1,a2,a3) returned currentTable
         -- putStrLn "wrote io ref"
         -- print (a1,a2)
-        print (Map.size newMemoTable)
+        -- print (Map.size newMemoTable)
         writeIORef memo_table newMemoTable
         return returned
 
@@ -106,7 +106,7 @@ unfold :: String -> [Int] -> (String, [Int])
 unfold str combo = (concat (intersperse "?" (replicate 5 str)), concat (replicate 5 combo))
 
 part2' lines =
-    let result = sum $ map (\s -> let p = numPossibilitiesForLineUnfolded s in (trace $ show s ++ " " ++ show p) p) lines in print result
+    let result = sum $ map (\s -> let p = numPossibilitiesForLineUnfolded s in {-(trace $ show s ++ " " ++ show p)-} p) lines in print result
 
 part2 = do
     lines <- getLines "day12/input.txt"
