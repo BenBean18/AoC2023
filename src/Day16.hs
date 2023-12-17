@@ -110,15 +110,37 @@ followBeam diagram current direction memoizeOrNot =
 
 -- 244 too low
 
-part1' lines =
-    print $ Set.size (followBeam lines (0,0) (1,0) True)
+part1' lines = do
+    -- ... ok so maybe unsafePerformIO does cause some weird problems :)
+    writeIORef visitedSet Set.empty
+    writeIORef memoMap Map.empty
+    let result = Set.size (followBeam lines (0,0) (1,0) True) in print result
 
 part1 = do
     lines <- getLines "day16/input.txt"
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+allEntryPoints :: [[Char]] -> [(Coord, Direction)]
+allEntryPoints lines =
+    let topRow = [((x, 0), (0, 1)) | x <- [0..(length (head lines) - 1)]]
+        bottomRow = [((x, (length lines - 1)), (0, -1)) | x <- [0..(length (head lines) - 1)]]
+        leftSide = [((0, y), (1, 0)) | y <- [0..(length lines - 1)]]
+        rightSide = [(((length (head lines) - 1), y), (-1, 0)) | y <- [0..(length lines - 1)]] in topRow ++ bottomRow ++ leftSide ++ rightSide
+
+energizationScore :: [String] -> (Coord, Direction) -> Int
+energizationScore lines (startCoord, startDir) =
+    unsafePerformIO $ do
+        writeIORef visitedSet Set.empty
+        writeIORef memoMap Map.empty
+        return (Set.size (followBeam lines startCoord startDir True))
+
+part2' lines = do
+    writeIORef visitedSet Set.empty
+    writeIORef memoMap Map.empty
+    let allPossibleEnergizations = map (energizationScore lines) (allEntryPoints lines)
+    let result = maximum allPossibleEnergizations
+    print result
 
 part2 = do
     lines <- getLines "day16/input.txt"
