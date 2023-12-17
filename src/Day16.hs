@@ -76,7 +76,7 @@ visitedSet = unsafePerformIO (newIORef mempty)
 -- so this gets stuck in an infinite loop when two paths go to the same place
 
 followBeam' :: [String] -> Coord -> Direction -> Bool -> Set.Set Coord
-followBeam' diagram current direction m = (trace $ show current ++ " " ++ show direction) (if (x current < 0 || x current >= (length (head diagram)) || y current < 0 || y current >= (length diagram)) then Set.empty else
+followBeam' diagram current direction m = {-(trace $ show current ++ " " ++ show direction)-} (if (x current < 0 || x current >= (length (head diagram)) || y current < 0 || y current >= (length diagram)) then Set.empty else
         let thisChar = charAt diagram current in
             if thisChar == '.' then Set.insert current (followBeam diagram (current `add` direction) direction m)
             else if thisChar == '/' then let newDirection = rotate direction '/' in Set.insert current $ followBeam diagram (current `add` newDirection) newDirection m
@@ -102,7 +102,7 @@ followBeam diagram current direction memoizeOrNot =
             let newVisitedSet = Set.insert (current,direction) currentVisited
             -- putStrLn "wrote io ref"
             -- print (a1,a2)
-            print (Map.size newMemoTable)
+            -- print (Map.size newMemoTable)
             writeIORef memoMap newMemoTable
             writeIORef visitedSet newVisitedSet
             return returned
@@ -111,7 +111,7 @@ followBeam diagram current direction memoizeOrNot =
 -- 244 too low
 
 part1' lines =
-    print $ (followBeam lines (0,0) (1,0) True)
+    print $ Set.size (followBeam lines (0,0) (1,0) True)
 
 part1 = do
     lines <- getLines "day16/input.txt"
