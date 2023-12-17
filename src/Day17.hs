@@ -35,7 +35,7 @@ type Path = [Coord]
 neighbors :: Path -> [Coord]
 neighbors path =
     map ((if length path > 0 then last path else (0,0)) `add`)
-    (if length path < 2 then [(0,-1),(1,0),(0,1),(-1,0)] else 
+    (if length path < 2 then [(0,-1),(1,0),(0,1),(-1,0)] else
         let lastDir = (last path) `sub` (path !! (length path - 2)) in
             filter (\c -> dotTuples lastDir c == 0) [(0,-1),(1,0),(0,1),(-1,0)] ++ if length path < 4 then [lastDir] else
                 let lastThree = drop (length path - 4) path
@@ -67,8 +67,10 @@ addToPath lines (currentPath, currentCost) newCoord = (currentPath ++ [newCoord]
 dijkstra :: [String] -> Map.Map Coord (Path, Int) -> (Path, Int) -> Set.Set Coord -> Coord -> (Path, Int)
 dijkstra lines costMap (currentPath, currentCost) visited end = (trace $ show (last currentPath))
     (if last currentPath == end then (currentPath, currentCost) else
-        let newMap = Map.unionWith (\(i1,p1) (i2,p2) -> if i1 < i2 then (i1,p1) else (i2,p2)) (Map.fromList (map (\n -> (n, addToPath lines (currentPath, currentCost) n)) (filter (inBounds lines) (neighbors currentPath)))) costMap
-            minUnvisited = minimumBy (compare `on` snd) (Map.filterWithKey (\k _ -> k `Set.notMember` visited) newMap) in {-(trace $ "neighbors are " ++ show (neighbors currentPath) ++ " current map is " ++ show newMap)-} (dijkstra lines newMap minUnvisited (Set.insert (last currentPath) visited) end))
+        let newConnectionMap = Map.fromList (map (\neigh -> (neigh, addToPath lines (currentPath, currentCost) neigh)) (filter (inBounds lines) (neighbors currentPath)))
+            newMap = Map.unionWith (\(p1,i1) (p2,i2) -> if i1 < i2 then (p1,i1) else (p2,i2)) costMap newConnectionMap
+            unvisited = Map.filterWithKey (\k _ -> k `Set.notMember` visited) newMap
+            (minUnvisitedCoord, minUnvisited) = minimumBy (compare `on` (snd . snd)) (Map.toList unvisited) in {-(trace $ "neighbors are " ++ show (neighbors currentPath) ++ " current map is " ++ show newMap)-} (dijkstra lines newMap minUnvisited (Set.insert minUnvisitedCoord visited) end))
 
 part1' lines = do
     -- (0,0) to (13,12)
