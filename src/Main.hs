@@ -55,6 +55,7 @@ main = do
                     else if day == 12 then Day12.part2
                     else if day == 13 then Day13.part2
                     else if day == 14 then Day14.part2
+                    else if day == 15 then Day15.part2
                     else putStrLn "I haven't solved that yet (or it doesn't exist)"
                 else if part == "b" then
                     if day == 1 then Day1.benchmark
@@ -71,6 +72,7 @@ main = do
                     else if day == 12 then Day12.benchmark
                     else if day == 13 then Day13.benchmark
                     else if day == 14 then Day14.benchmark
+                    else if day == 15 then Day15.benchmark
                     else putStrLn "Not benchmarked"
                 else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
     else putStrLn "Usage: AoC2023 <day> <part || \"v\" for visualization>"
