@@ -19,6 +19,7 @@ import Data.List.Unique (allUnique)
 
 import Data.IORef
 import GHC.IO.Unsafe (unsafePerformIO)
+import Data.Function.Memoize
 
 -- Part 1
 type Coord = (Int, Int)
@@ -65,41 +66,52 @@ charAt :: [String] -> Coord -> Char
 charAt charList (x,y) = charList !! y !! x
 
 {-# NOINLINE memoMap #-}
-memoMap :: IORef (Map.Map (Set.Set Coord, Coord, Direction) (Set.Set Coord))
+memoMap :: IORef (Map.Map (Coord, Direction) (Set.Set Coord))
 memoMap = unsafePerformIO (newIORef mempty)
 
-followBeam' :: [[Char]] -> Set.Set Coord -> Coord -> Direction -> Set.Set Coord
-followBeam' diagram visited current direction = {-(trace $ show $ Set.size visited)-} (
-    if (x current < 0 || x current >= (length (head diagram)) || y current < 0 || y current >= (length diagram)) then visited else
-        let thisChar = charAt diagram current in
-            if thisChar == '.' then followBeam diagram (Set.insert current visited) (current `add` direction) direction
-            else if thisChar == '/' then let newDirection = rotate direction '/' in followBeam diagram (Set.insert current visited) (current `add` newDirection) newDirection
-            else if thisChar == '\\' then let newDirection = rotate direction '\\' in followBeam diagram (Set.insert current visited) (current `add` newDirection) newDirection
-            else if thisChar == '-' then
-                if direction `dotTuples` (1,0) == 0 then Set.union (followBeam diagram (Set.insert current visited) (current `add` (1,0)) (1,0)) (followBeam diagram (Set.insert current visited) (current `add` (-1,0)) (-1,0))
-                else followBeam diagram (Set.insert current visited) (current `add` direction) direction
-            else if thisChar == '|' then
-                if direction `dotTuples` (0,1) == 0 then Set.union (followBeam diagram (Set.insert current visited) (current `add` (0,1)) (0,1)) (followBeam diagram (Set.insert current visited) (current `add` (0,-1)) (0,-1))
-                else followBeam diagram (Set.insert current visited) (current `add` direction) direction
-            else (trace "wtf") visited)
+{-# NOINLINE visitedSet #-}
+visitedSet :: IORef (Set.Set (Coord, Direction))
+visitedSet = unsafePerformIO (newIORef mempty)
 
-followBeam :: [[Char]] -> Set.Set Coord -> Coord -> Direction -> Set.Set Coord
-followBeam diagram visited current direction = (trace $ show current ++ " " ++ show direction)
+-- so this gets stuck in an infinite loop when two paths go to the same place
+
+followBeam' :: [String] -> Coord -> Direction -> Bool -> Set.Set Coord
+followBeam' diagram current direction m = (trace $ show current ++ " " ++ show direction) (if (x current < 0 || x current >= (length (head diagram)) || y current < 0 || y current >= (length diagram)) then Set.empty else
+        let thisChar = charAt diagram current in
+            if thisChar == '.' then Set.insert current (followBeam diagram (current `add` direction) direction m)
+            else if thisChar == '/' then let newDirection = rotate direction '/' in Set.insert current $ followBeam diagram (current `add` newDirection) newDirection m
+            else if thisChar == '\\' then let newDirection = rotate direction '\\' in Set.insert current $ followBeam diagram (current `add` newDirection) newDirection m
+            else if thisChar == '-' then
+                if direction `dotTuples` (1,0) == 0 then Set.insert current $ Set.union (followBeam diagram (current `add` (1,0)) (1,0) m) (followBeam diagram (current `add` (-1,0)) (-1,0) m)
+                else Set.insert current $ followBeam diagram (current `add` direction) direction m
+            else if thisChar == '|' then
+                if direction `dotTuples` (0,1) == 0 then Set.insert current $ Set.union (followBeam diagram (current `add` (0,1)) (0,1) m) (followBeam diagram (current `add` (0,-1)) (0,-1) m)
+                else Set.insert current $ followBeam diagram (current `add` direction) direction m
+            else trace "wtf" Set.empty)
+
+followBeam :: [String] -> Coord -> Direction -> Bool -> Set.Set Coord
+followBeam diagram current direction memoizeOrNot =
+    if x current < 0 || x current >= (length (head diagram)) || y current < 0 || y current >= (length diagram) then Set.empty else
     unsafePerformIO $ do
         currentTable <- readIORef memoMap
-        let returnedGood = Map.findWithDefault (Set.empty) (visited, current, direction) currentTable
-        let returned = if returnedGood /= Set.empty then returnedGood else followBeam' diagram visited current direction
-        let newMemoTable = Map.insert (visited,current,direction) returned currentTable
-        -- putStrLn "wrote io ref"
-        -- print (a1,a2)
-        -- print (Map.size newMemoTable)
-        writeIORef memoMap newMemoTable
-        return returned
+        currentVisited <- readIORef visitedSet
+        if (current, direction) `Set.member` currentVisited then return (Set.empty) else do
+            let returnedGood = Map.findWithDefault Set.empty (current, direction) currentTable
+            let returned = if returnedGood /= Set.empty then (trace $ "already have " ++ show (current, direction)) returnedGood else followBeam' diagram current direction True
+            let newMemoTable = Map.insert (current,direction) returned currentTable
+            let newVisitedSet = Set.insert (current,direction) currentVisited
+            -- putStrLn "wrote io ref"
+            -- print (a1,a2)
+            print (Map.size newMemoTable)
+            writeIORef memoMap newMemoTable
+            writeIORef visitedSet newVisitedSet
+            return returned
+-- followBeam = memoize3 followBeam'
 
 -- 244 too low
 
 part1' lines =
-    print $ Set.size (followBeam lines Set.empty (0,0) (1,0))
+    print $ (followBeam lines (0,0) (1,0) True)
 
 part1 = do
     lines <- getLines "day16/input.txt"
