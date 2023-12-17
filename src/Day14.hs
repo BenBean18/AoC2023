@@ -63,9 +63,15 @@ spinCycle lines = map shiftDown (transpose (map shiftDown (transpose (map shiftU
 spin n lines = foldl (\s _ -> spinCycle s) lines (replicate n 0)
 
 part2' lines =
-    let spun = spin 1000000000 lines
-        loads = map (loadFor spun) [0..length lines - 1] in do
-            print $ spun
+    let spins = map (\i -> spin i lines) [0..100]
+        cycles = map (\i -> elemIndices (spins !! i) spins) [0..10]
+        firstCycle = head (filter (\l -> length l > 1) cycles)
+        cycleStart = (head firstCycle)
+        period = (firstCycle !! 1) - (firstCycle !! 0)
+        offset = (1000000000 - (head firstCycle)) `mod` period
+        final = spin offset (spins !! cycleStart)
+        loads = map (loadFor final) [0..length lines - 1] in do
+            print $ firstCycle
             print $ sum loads
 
 part2 = do
