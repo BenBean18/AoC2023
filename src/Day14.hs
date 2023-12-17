@@ -62,9 +62,11 @@ spinCycle lines = map shiftDown (transpose (map shiftDown (transpose (map shiftU
 
 spin n lines = foldl (\s _ -> spinCycle s) lines (replicate n 0)
 
-part2' lines =
-    let spins = map (\i -> spin i lines) [0..100]
-        cycles = map (\i -> elemIndices (spins !! i) spins) [0..10]
+-- 108409 too high
+
+part2' lines = --print $ spin 1000 lines
+    let spins = foldl (\list _ -> list ++ [spinCycle (last list)]) [lines] [0..1000]
+        cycles = map (\i -> elemIndices (spins !! i) spins) [0..1000]
         firstCycle = head (filter (\l -> length l > 1) cycles)
         cycleStart = (head firstCycle)
         period = (firstCycle !! 1) - (firstCycle !! 0)
