@@ -51,7 +51,22 @@ part1 = do
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+shiftDownOne str = shiftUpOne (reverse str)
+
+shiftDown str = reverse (shiftUp (reverse str))
+
+-- probably some memoization here
+-- or...gasp...*cycle* detection
+-- i'll work on this tomorrow, i'm tired
+spinCycle lines = map shiftDown (transpose (map shiftDown (transpose (map shiftUp (transpose (map shiftUp (transpose lines)))))))
+
+spin n lines = foldl (\s _ -> spinCycle s) lines (replicate n 0)
+
+part2' lines =
+    let spun = spin 1000000000 lines
+        loads = map (loadFor spun) [0..length lines - 1] in do
+            print $ spun
+            print $ sum loads
 
 part2 = do
     lines <- getLines "day14/input.txt"
