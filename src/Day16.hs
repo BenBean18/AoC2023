@@ -64,8 +64,12 @@ y = snd
 charAt :: [String] -> Coord -> Char
 charAt charList (x,y) = charList !! y !! x
 
-followBeam :: [[Char]] -> Set.Set Coord -> Coord -> Direction -> Set.Set Coord
-followBeam diagram visited current direction = {-(trace $ show $ Set.size visited)-} (
+{-# NOINLINE memoMap #-}
+memoMap :: IORef (Map.Map (Set.Set Coord, Coord, Direction) (Set.Set Coord))
+memoMap = unsafePerformIO (newIORef mempty)
+
+followBeam' :: [[Char]] -> Set.Set Coord -> Coord -> Direction -> Set.Set Coord
+followBeam' diagram visited current direction = {-(trace $ show $ Set.size visited)-} (
     if (x current < 0 || x current >= (length (head diagram)) || y current < 0 || y current >= (length diagram)) then visited else
         let thisChar = charAt diagram current in
             if thisChar == '.' then followBeam diagram (Set.insert current visited) (current `add` direction) direction
@@ -78,6 +82,19 @@ followBeam diagram visited current direction = {-(trace $ show $ Set.size visite
                 if direction `dotTuples` (0,1) == 0 then Set.union (followBeam diagram (Set.insert current visited) (current `add` (0,1)) (0,1)) (followBeam diagram (Set.insert current visited) (current `add` (0,-1)) (0,-1))
                 else followBeam diagram (Set.insert current visited) (current `add` direction) direction
             else (trace "wtf") visited)
+
+followBeam :: [[Char]] -> Set.Set Coord -> Coord -> Direction -> Set.Set Coord
+followBeam diagram visited current direction = (trace $ show current ++ " " ++ show direction)
+    unsafePerformIO $ do
+        currentTable <- readIORef memoMap
+        let returnedGood = Map.findWithDefault (Set.empty) (visited, current, direction) currentTable
+        let returned = if returnedGood /= Set.empty then returnedGood else followBeam' diagram visited current direction
+        let newMemoTable = Map.insert (visited,current,direction) returned currentTable
+        -- putStrLn "wrote io ref"
+        -- print (a1,a2)
+        -- print (Map.size newMemoTable)
+        writeIORef memoMap newMemoTable
+        return returned
 
 -- 244 too low
 
