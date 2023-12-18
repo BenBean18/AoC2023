@@ -157,12 +157,15 @@ ultraNeighbors path =
             (if lastDiff `dotTuples` lastDiff == (10 * 10) then []
             else [normalizeToOne lastDiff])
 
+costAt :: [String] -> Coord -> Int
+costAt lines c = read [charAt lines c] :: Int
+
 costBetween :: [String] -> Coord -> Coord -> Int
-costBetween lines c1 c2 = sum $ map (\c -> read [charAt lines c] :: Int) (range c1 c2)
+costBetween lines c1 c2 = sum $ map (costAt lines) (range c1 c2)
 
 costOf :: [String] -> Path -> Int
 costOf lines path = if length path == 1 then 0 else
-    sum (zipWith (costBetween lines) (tail path) (init path))
+    sum (zipWith (costBetween lines) (tail path) (init path)) - sum (map (costAt lines) (init path))
 
 applyMove :: Path -> Coord -> Path
 applyMove path c =
