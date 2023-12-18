@@ -59,7 +59,7 @@ getCoordList lines =
 -- shoelace formula! https://en.wikipedia.org/wiki/Shoelace_formula
 polygonArea' :: [Coord] -> Int
 polygonArea' [_,_] = 0
-polygonArea' ((x0,y0):(x1,y1):coords) = (x0*y1 - x1*y0) + polygonArea' ((x1,y1):coords)
+polygonArea' ((x0,y0):(x1,y1):coords) = x0*y1 - x1*y0 + polygonArea' ((x1,y1):coords)
 
 {-
 #######
@@ -81,12 +81,12 @@ yCoord :: Coord -> Int
 yCoord (_,y) = y
 
 polygonArea :: [Coord] -> Int
-polygonArea (coords) = (polygonArea' coords + (xCoord (last coords) * yCoord (head coords)) - (xCoord (head coords) * yCoord (last coords))) `div` 2
+polygonArea coords = (polygonArea' coords + xCoord (last coords) * yCoord (head coords) - xCoord (head coords) * yCoord (last coords)) `div` 2
 
 -- Trying again using the cool graphics wall trick
 
 replace :: (a -> a) -> Int -> [a] -> [a]
-replace f 0 (x:xs) = (f x):xs
+replace f 0 (x:xs) = f x:xs
 replace f i (x:xs) = x : replace f (i-1) xs
 replace f i [] = []
 
@@ -103,14 +103,47 @@ emptyTrench coords = replicate (maximum (map yCoord coords) + 1) (replicate (max
 buildTrench :: [Coord] -> [[Bool]] -> [[Bool]]
 buildTrench [_,_,_] l = l
 buildTrench (c0:c1:coords) currentList =
-    let newList = foldl (\list coord -> replace2D True coord list) currentList (range c0 c1) in buildTrench (c1:coords) newList
+    let newList = foldl (flip (replace2D True)) currentList (range c0 c1) in buildTrench (c1:coords) newList
+
+-- wall parity! even = outside, odd = inside
+-- ugh but this doesn't work since if the wall is parallel to you...
+-- totalInsideRow :: [Bool] -> Int -> Int
+-- totalInsideRow [] _ = 0
+-- totalInsideRow (x:xs) currentWalls =
+--     let toAdd
+--           | x = 1
+--           | odd currentWalls = 1
+--           | otherwise = 0 in toAdd + totalInsideRow xs (currentWalls + if x then 1 else 0)
+
+at :: [[a]] -> Coord -> a
+at charList (x,y) = charList !! y !! x
+
+inBounds :: [[a]] -> Coord -> Bool
+inBounds charList (xc,yc) = not (xc < 0 || yc < 0 || xc >= length (head charList) || yc >= length charList)
+
+canGo :: [[Bool]] -> Coord -> Coord -> Bool
+canGo bools c1 c2 = not (at bools c1 && not (at bools c2))
+
+neighboringCoords :: [[Bool]] -> Coord -> [Coord]
+neighboringCoords chars c =
+    let allDirs = filter (inBounds chars) (map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)]) in filter (canGo chars c) allDirs
+
+-- flood fill is easier
+bfsFill :: [[Bool]] -> Set.Set Coord -> [Coord] -> Int
+bfsFill _ _ [] = 0
+bfsFill trench visited (current:frontier) =
+    if current `Set.member` visited then 0 + bfsFill trench visited frontier
+    else
+        let neighbors = filter (`Set.notMember` visited) (neighboringCoords trench current) in 1 + bfsFill trench (Set.insert current visited) (frontier ++ neighbors)
+
 
 -- Part 1
 part1' lines =
     let coordList = getCoordList lines
-        area = polygonArea coordList in do
+        trench = reverse $ buildTrench coordList (emptyTrench coordList)
+        area = bfsFill trench Set.empty [(1,1)] in do
         print coordList
-        print (buildTrench coordList (emptyTrench coordList))
+        print trench
         print area
 
 part1 = do
