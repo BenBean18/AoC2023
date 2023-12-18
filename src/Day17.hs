@@ -175,9 +175,9 @@ applyMove path c =
             if lastDiff `dotTuples` c == 0 then path ++ [last path `add` c] -- add another point since it's a corner
             else init path ++ [last path `add` c]
 
-neighboringPaths :: Path -> [Path]
-neighboringPaths p =
-    let theNeighbors = ultraNeighbors p in map (applyMove p) theNeighbors
+neighboringPaths :: [String] -> Path -> [Path]
+neighboringPaths lines p =
+    let theNeighbors = filter (\c -> inBounds lines (last p `add` c)) (ultraNeighbors p) in map (applyMove p) theNeighbors
 
 ultraDijkstra :: [String] -> PSQ.PSQ Path Int -> Set.Set Path -> Coord -> Int
 ultraDijkstra lines frontier visited end =
@@ -186,11 +186,12 @@ ultraDijkstra lines frontier visited end =
         currentPath = PSQ.key current
         currentCost = PSQ.prio current
         newVisited = Set.insert currentPath visited in {-trace (show currentPath) $ -}if last currentPath == end then currentCost else
-    let neighboringPaths = filter (\(p,i) -> p `Set.notMember` visited) (map (addToPath lines (currentPath, currentCost)) (filter (inBounds lines) (neighbors currentPath)))
-        newFrontier = foldl (\q (key, prio) -> PSQ.insertWith min key prio q) (PSQ.deleteMin frontier) neighboringPaths in
-        {-trace (show neighboringPaths ++ "\n\n")-} dijkstra lines newFrontier newVisited end
+    let neighborPaths = filter (\(p,i) -> p `Set.notMember` visited) (map (\path -> (path, costOf lines path)) (neighboringPaths lines currentPath))
+        newFrontier = foldl (\q (key, prio) -> PSQ.insertWith min key prio q) (PSQ.deleteMin frontier) neighborPaths in
+        {-trace (show neighboringPaths ++ "\n\n")-} ultraDijkstra lines newFrontier newVisited end
 
-part2' lines = print "Hi"
+part2' lines = 
+    let dijkstraed = ultraDijkstra lines (PSQ.fromList [[(0,0),(1,0)] PSQ.:-> (costAt lines (1,0)), [(0,0),(0,1)] PSQ.:-> (costAt lines (0,1))]) Set.empty (length (head lines)-1,length lines-1) in print dijkstraed
 
 part2 = do
     lines <- getLines "day17/input.txt"
