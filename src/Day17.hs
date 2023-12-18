@@ -19,6 +19,8 @@ import Data.List.Unique (allUnique)
 import Data.Function (on)
 import Text.Printf (printf)
 
+import qualified Data.PSQueue as PSQ
+
 -- Part 1
 type Coord = (Int, Int)
 
@@ -70,19 +72,21 @@ addToPath lines (currentPath, currentCost) newCoord = (currentPath ++ [newCoord]
 -- but then we can't continue downward since we have hit a train of 3 so we need to explore other ways of reaching it
 
 -- Returns the cost of the minimum path
-dijkstra :: [String] -> Set.Set (Path, Int) -> (Path, Int) -> Set.Set Path -> Coord -> (Path, Int)
-dijkstra lines frontier (currentPath, currentCost) visited end = {-(trace $ "PATH: " ++ show currentPath ++ "\n\n\n\n")-}
-    (if last currentPath == end then {-(trace $ "-----\n\n" ++ show frontier ++ "\n\n========" ++ show visited ++ "\n\n---")-} (currentPath, currentCost) else
-        let newConnections = Set.fromList (map (addToPath lines (currentPath, currentCost)) (filter (inBounds lines) (neighbors currentPath)))
-            newMap = Set.union frontier newConnections
-            unvisited = Set.filter (\(p, _) -> p `Set.notMember` visited) newMap
-            minUnvisited = minimumBy (compare `on` snd) (Set.toList unvisited) in (dijkstra lines newMap minUnvisited (Set.insert currentPath visited) end))
+dijkstra :: [String] -> PSQ.PSQ Path Int -> Map.Map Coord (Path, Int) -> Coord -> Int
+dijkstra lines frontier costMap end =
+    let currentMaybe = PSQ.findMin frontier in if isNothing currentMaybe then 0 {- couldn't reach end -} else
+    let current = fromJust currentMaybe
+        currentPath = PSQ.key current
+        currentCost = PSQ.prio current in if last currentPath == end then currentCost else
+    let neighboringPaths = map (addToPath lines (currentPath, currentCost)) (filter (inBounds lines) (neighbors currentPath))
+        neighboringPathMap = Map.fromList (map (\(path, cost) -> (last path, (path, cost))) neighboringPaths)
+        newCostMap = Map.unionWith (\(c1,i1) (c2,i2) -> if i1 < i2 then (c1,i1) else (c2,i2)) costMap neighboringPathMap
+        newFrontier = foldl (\q (key, prio) -> PSQ.insert key prio q) (PSQ.deleteMin frontier) neighboringPaths in
+        dijkstra lines newFrontier newCostMap end
 
 part1' lines = do
     -- (0,0) to (13,12)
-    print $ length lines
-    print $ length (head lines)
-    let dijkstraed = dijkstra lines Set.empty ([(0,0)], 0) (Set.singleton [(0,0)]) (12,12) in print dijkstraed
+    let dijkstraed = dijkstra lines (PSQ.singleton [(0,0)] 0) Map.empty (12,12) in print dijkstraed
     -- [(0,0),(0,1),(1,1),(1,2),(1,3),(0,3),(0,4)]...this path is the optimal one THAT IT ISN'T FINDING
 
 clear :: IO ()
