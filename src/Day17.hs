@@ -44,7 +44,7 @@ neighbors path =
                 let lastThree = drop (length path - 4) path
                     lastMove = ((lastThree !! 3) `sub` (lastThree !! 2))
                     penultimateMove = ((lastThree !! 2) `sub` (lastThree !! 1))
-                    penpenultimateMove = ((lastThree !! 1) `sub` (head lastThree)) in
+                    penpenultimateMove = ((lastThree !! 1) `sub` head lastThree) in
                         (if lastMove == penultimateMove && penultimateMove == penpenultimateMove then {-(trace $ "have to switch for " ++ show path)-} [] else [lastMove]))
 
 -- Dijkstra's algorithm
@@ -64,7 +64,7 @@ charAt :: [String] -> Coord -> Char
 charAt charList (x,y) = charList !! y !! x
 
 addToPath :: [String] -> (Path, Int) -> Coord -> (Path, Int)
-addToPath lines (currentPath, currentCost) newCoord = (currentPath ++ [newCoord], currentCost + (read [charAt lines newCoord] :: Int))
+addToPath lines (currentPath, currentCost) newCoord = (trimPath (currentPath ++ [newCoord]), currentCost + (read [charAt lines newCoord] :: Int))
 
 -- ...this is weird
 -- you can't always continue from the end of the shortest path to a point
@@ -77,6 +77,8 @@ addToPath lines (currentPath, currentCost) newCoord = (currentPath ++ [newCoord]
 -- wait...[(0,0),(0,1),(0,2),(1,2),(1,1),(2,1),(2,0),(1,0),(1,1),(0,1),(0,0),(1,0),(1,1),(2,1),(3,1),(3,2),(4,2),(5,2),(6,2)] is a very dumb path (goes to (0,0) twice)
 -- so we can't have that. if a neighbor is already in the path filter it out
 
+-- 1261 too high (!)
+
 -- only last 4 matter
 trimPath :: [a] -> [a]
 trimPath path = drop (max 0 (length path - 4)) path
@@ -88,14 +90,14 @@ dijkstra lines frontier visited end =
     let current = fromJust currentMaybe
         currentPath = PSQ.key current
         currentCost = PSQ.prio current
-        newVisited = Set.insert (trimPath currentPath) visited in {-trace (show currentPath) $ -}if last currentPath == end then currentCost else
-    let neighboringPaths = filter (\(p,i) -> trimPath p `Set.notMember` newVisited) (map (addToPath lines (currentPath, currentCost)) (filter (\neigh -> inBounds lines neigh && neigh `notElem` currentPath) (neighbors currentPath)))
-        newFrontier = foldl (\q (key, prio) -> PSQ.insert key prio q) (PSQ.deleteMin frontier) neighboringPaths in
+        newVisited = Set.insert currentPath visited in {-trace (show currentPath) $ -}if last currentPath == end then currentCost else
+    let neighboringPaths = filter (\(p,i) -> p `Set.notMember` visited) (map (addToPath lines (currentPath, currentCost)) (filter (inBounds lines) (neighbors currentPath)))
+        newFrontier = foldl (\q (key, prio) -> PSQ.insertWith min key prio q) (PSQ.deleteMin frontier) neighboringPaths in
         {-trace (show neighboringPaths ++ "\n\n")-} dijkstra lines newFrontier newVisited end
 
 part1' lines = do
     -- (0,0) to (13,12)
-    let dijkstraed = dijkstra lines (PSQ.singleton [(0,0)] 0) Set.empty (12,12) in print dijkstraed
+    let dijkstraed = dijkstra lines (PSQ.singleton [(0,0)] 0) Set.empty (length (head lines)-1,length lines-1) in print dijkstraed
     -- [(0,0),(0,1),(1,1),(1,2),(1,3),(0,3),(0,4)]...this path is the optimal one THAT IT ISN'T FINDING
 
 -- (1,1) -> 0.118s
