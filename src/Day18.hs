@@ -125,7 +125,7 @@ part1' lines =
         totalArea = length trench * length (head trench)
         outsideArea = bfsFill trench Set.empty [(0,0)]
         area = totalArea - Set.size outsideArea in do
-        putStrLn (printLines trench)
+        -- putStrLn (printLines trench)
         print area
 
 part1 = do
@@ -177,18 +177,26 @@ parseMove2 :: String -> Coord
 parseMove2 s =
     let theWords = words s
         color = drop 2 (init (last theWords))
-        direction = getDirection (head (head theWords))
+        direction = getDirection2 (last color)
         magnitude = fst $ head $ readHex (init color) in direction `mul` magnitude
 
+-- will be in reverse order
+getCoordList2' :: [String] -> [Coord]
+getCoordList2' = foldl (\currentList str -> head currentList `add` parseMove2 str : currentList) [(0,0)]
+
+getCoordList2 :: [String] -> [Coord]
+getCoordList2 lines =
+    let l = getCoordList2' lines in map (\c -> c `sub` (minimum (map xCoord l), minimum (map yCoord l))) l
+
 part2' lines =
-    let coordList = reverse $ getCoordList lines -- this is clockwise so we have to reverse
+    let coordList = reverse $ getCoordList2 lines -- this is clockwise so we have to reverse
         midX = maximum (map xCoord coordList) `div` 2
         midY = maximum (map yCoord coordList) `div` 2
         trench = buildTrench (reverse coordList) (buildTrench coordList (emptyTrench coordList))
         trenchArea = numTrenched coordList
         area = polygonArea coordList
         finalArea = area - (trenchArea `div` 2) + 1 + trenchArea in do
-            -- print (map parseMove lines)
+            -- print (map parseMove2 lines)
             -- print coordList
             -- print (numTrenched coordList)
             -- print (numTrenched (reverse $ getCoordList lines))
