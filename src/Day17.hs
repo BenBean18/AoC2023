@@ -114,6 +114,53 @@ part1 = do
     part1' lines
 
 -- Part 2
+
+-- haha copying from day 9 :)
+differencesList :: [Coord] -> [Coord]
+differencesList ints = zipWith sub (tail ints) (init ints)
+
+normalizeToOne :: Coord -> Coord
+normalizeToOne (x,y) = (if x > 0 then 1 else if x == 0 then 0 else -1, if y > 0 then 1 else if y == 0 then 0 else -1)
+
+mul :: Coord -> Int -> Coord
+mul (x,y) m = (x*m, y*m)
+
+lessThanOrEqual :: Coord -> Coord -> Bool
+lessThanOrEqual (x1,y1) (x2,y2) = x1 <= x2 && y1 <= y2
+
+-- ugh... this sucks
+-- so in a straight line, needs to move between 4 and 10 spaces
+-- i think we now need to consider the last 11 of the path?
+-- so the neighbors of a path that is <= 3 or where there are fewer than 4 blocks in the same direction is just going forward n blocks, where n is the number required to get to 4
+-- the neighbors of a path that has 4 <= x < 10 blocks in that direction are forward, left, and right
+-- and finally a path that has 10 blocks in the same direction is just left and right
+-- ** it's MUCH more optimized if we have the graph be only the corners, but that might be hard to handle for checking # of blocks
+-- actually if we JUST consider the corners then we're fine, you just have to look at the last difference
+-- map (\c -> init path ++ [last path `add` c]) [(0,4),(4,0),(0,-4),(-4,0)]
+ultraNeighbors :: Path -> [Coord]
+ultraNeighbors path =
+    if length path == 1 then [(0,4),(4,0),(0,-4),(-4,0)]
+    else
+        let diffs = differencesList path
+            lastDiff = last diffs
+            diffSize = round (sqrt (fromIntegral (lastDiff `dotTuples` lastDiff))) :: Int in
+        if lastDiff `dotTuples` lastDiff < (4 * 4) then [(normalizeToOne lastDiff) `mul` (4 - diffSize)]
+        else filter (\c -> dotTuples lastDiff c == 0) [(0,-1),(1,0),(0,1),(-1,0)] ++
+            (if lastDiff `dotTuples` lastDiff == (10 * 10) then []
+            else [normalizeToOne lastDiff])
+
+applyMove :: Path -> Coord -> Path
+applyMove path c =
+    if length path == 1 then init path ++ [last path `add` c] else
+    let diffs = differencesList path
+        lastDiff = last diffs in
+            if lastDiff `dotTuples` c == 0 then path ++ [last path `add` c] -- add another point since it's a corner
+            else init path ++ [last path `add` c]
+
+neighboringPaths :: Path -> [Path]
+neighboringPaths p =
+    let theNeighbors = ultraNeighbors p in map (applyMove p) theNeighbors
+
 part2' lines = print "Hi"
 
 part2 = do
