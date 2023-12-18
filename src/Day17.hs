@@ -64,7 +64,7 @@ charAt :: [String] -> Coord -> Char
 charAt charList (x,y) = charList !! y !! x
 
 addToPath :: [String] -> (Path, Int) -> Coord -> (Path, Int)
-addToPath lines (currentPath, currentCost) newCoord = (trimPath (currentPath ++ [newCoord]), currentCost + (read [charAt lines newCoord] :: Int))
+addToPath lines (currentPath, currentCost) newCoord = (trimPath (currentPath ++ [newCoord]) 4, currentCost + (read [charAt lines newCoord] :: Int))
 
 -- ...this is weird
 -- you can't always continue from the end of the shortest path to a point
@@ -80,8 +80,8 @@ addToPath lines (currentPath, currentCost) newCoord = (trimPath (currentPath ++ 
 -- 1261 too high (!)
 
 -- only last 4 matter
-trimPath :: [a] -> [a]
-trimPath path = drop (max 0 (length path - 4)) path
+trimPath :: [a] -> Int -> [a]
+trimPath path i = drop (max 0 (length path - i)) path
 
 -- Returns the cost of the minimum path
 dijkstra :: [String] -> PSQ.PSQ Path Int -> Set.Set Path -> Coord -> Int
@@ -167,17 +167,17 @@ costOf :: [String] -> Path -> Int
 costOf lines path = if length path == 1 then 0 else
     sum (zipWith (costBetween lines) (tail path) (init path)) - sum (map (costAt lines) (init path))
 
-applyMove :: Path -> Coord -> Path
-applyMove path c =
-    if length path == 1 then init path ++ [last path `add` c] else
-    let diffs = differencesList path
+applyMove :: [String] -> (Path, Int) -> Coord -> (Path, Int)
+applyMove lines (origPath, origCost) c =
+    let path = trimPath origPath 2
+        diffs = differencesList path
         lastDiff = last diffs in
-            if lastDiff `dotTuples` c == 0 then path ++ [last path `add` c] -- add another point since it's a corner
-            else init path ++ [last path `add` c]
+            if lastDiff `dotTuples` c == 0 then (path ++ [last path `add` c], origCost + costOf lines [last path, last path `add` c]) -- add another point since it's a corner
+            else (init path ++ [last path `add` c], origCost + costOf lines [last path, last path `add` c])
 
-neighboringPaths :: [String] -> Path -> [Path]
-neighboringPaths lines p =
-    let theNeighbors = filter (\c -> inBounds lines (last p `add` c)) (ultraNeighbors p) in map (applyMove p) theNeighbors
+neighboringPaths :: [String] -> (Path, Int) -> [(Path, Int)]
+neighboringPaths lines (p,i) =
+    let theNeighbors = filter (\c -> inBounds lines (last p `add` c)) (ultraNeighbors p) in map (applyMove lines (p,i)) theNeighbors
 
 ultraDijkstra :: [String] -> PSQ.PSQ Path Int -> Set.Set Path -> Coord -> Int
 ultraDijkstra lines frontier visited end =
@@ -185,12 +185,14 @@ ultraDijkstra lines frontier visited end =
     let current = fromJust currentMaybe
         currentPath = PSQ.key current
         currentCost = PSQ.prio current
-        newVisited = Set.insert currentPath visited in {-trace (show currentPath) $ -}if last currentPath == end then currentCost else
-    let neighborPaths = filter (\(p,i) -> p `Set.notMember` visited) (map (\path -> (path, costOf lines path)) (neighboringPaths lines currentPath))
+        newVisited = Set.insert (trimPath currentPath 2) visited in {-trace (show currentPath) $ -}if last currentPath == end then currentCost
+    else if currentPath `Set.member` visited then ultraDijkstra lines (PSQ.deleteMin frontier) visited end else
+    let neighborPaths = filter (\(p,i) -> trimPath p 2 `Set.notMember` visited) (neighboringPaths lines (currentPath, currentCost))
         newFrontier = foldl (\q (key, prio) -> PSQ.insertWith min key prio q) (PSQ.deleteMin frontier) neighborPaths in
         {-trace (show neighboringPaths ++ "\n\n")-} ultraDijkstra lines newFrontier newVisited end
 
 part2' lines = 
+    -- This is O(n^2), when n doubled the runtime was approximately squared.
     let dijkstraed = ultraDijkstra lines (PSQ.fromList [[(0,0),(1,0)] PSQ.:-> (costAt lines (1,0)), [(0,0),(0,1)] PSQ.:-> (costAt lines (0,1))]) Set.empty (length (head lines)-1,length lines-1) in print dijkstraed
 
 part2 = do
