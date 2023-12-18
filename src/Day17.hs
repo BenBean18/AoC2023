@@ -125,6 +125,14 @@ normalizeToOne (x,y) = (if x > 0 then 1 else if x == 0 then 0 else -1, if y > 0 
 mul :: Coord -> Int -> Coord
 mul (x,y) m = (x*m, y*m)
 
+-- https://hackage.haskell.org/package/xmlgen-0.6.2.2/docs/src/Text-XML-Generator.html#%3C%23%3E
+infixl 5 <#>
+(<#>) :: a -> b -> (a, b)
+(<#>) x y = (x, y)
+
+range :: Coord -> Coord -> [Coord]
+range (x1,y1) (x2,y2) = concatMap (\y -> map (\x -> (x,y)) [min x1 x2..max x1 x2]) [min y1 y2..max y1 y2]
+
 lessThanOrEqual :: Coord -> Coord -> Bool
 lessThanOrEqual (x1,y1) (x2,y2) = x1 <= x2 && y1 <= y2
 
@@ -149,6 +157,13 @@ ultraNeighbors path =
             (if lastDiff `dotTuples` lastDiff == (10 * 10) then []
             else [normalizeToOne lastDiff])
 
+costBetween :: [String] -> Coord -> Coord -> Int
+costBetween lines c1 c2 = sum $ map (\c -> read [charAt lines c] :: Int) (range c1 c2)
+
+costOf :: [String] -> Path -> Int
+costOf lines path = if length path == 1 then 0 else
+    sum (zipWith (costBetween lines) (tail path) (init path))
+
 applyMove :: Path -> Coord -> Path
 applyMove path c =
     if length path == 1 then init path ++ [last path `add` c] else
@@ -160,6 +175,17 @@ applyMove path c =
 neighboringPaths :: Path -> [Path]
 neighboringPaths p =
     let theNeighbors = ultraNeighbors p in map (applyMove p) theNeighbors
+
+ultraDijkstra :: [String] -> PSQ.PSQ Path Int -> Set.Set Path -> Coord -> Int
+ultraDijkstra lines frontier visited end =
+    let currentMaybe = PSQ.findMin frontier in if isNothing currentMaybe then 0 {- couldn't reach end -} else
+    let current = fromJust currentMaybe
+        currentPath = PSQ.key current
+        currentCost = PSQ.prio current
+        newVisited = Set.insert currentPath visited in {-trace (show currentPath) $ -}if last currentPath == end then currentCost else
+    let neighboringPaths = filter (\(p,i) -> p `Set.notMember` visited) (map (addToPath lines (currentPath, currentCost)) (filter (inBounds lines) (neighbors currentPath)))
+        newFrontier = foldl (\q (key, prio) -> PSQ.insertWith min key prio q) (PSQ.deleteMin frontier) neighboringPaths in
+        {-trace (show neighboringPaths ++ "\n\n")-} dijkstra lines newFrontier newVisited end
 
 part2' lines = print "Hi"
 
