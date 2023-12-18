@@ -37,15 +37,15 @@ type Path = [Coord]
 
 neighbors :: Path -> [Coord]
 neighbors path =
-    map ((if length path > 0 then last path else (0,0)) `add`)
+    map ((if not (null path) then last path else (0,0)) `add`)
     (if length path < 2 then [(0,-1),(1,0),(0,1),(-1,0)] else
-        let lastDir = (last path) `sub` (path !! (length path - 2)) in
+        let lastDir = last path `sub` (path !! (length path - 2)) in
             filter (\c -> dotTuples lastDir c == 0) [(0,-1),(1,0),(0,1),(-1,0)] ++ if length path < 4 then [lastDir] else
                 let lastThree = drop (length path - 4) path
                     lastMove = ((lastThree !! 3) `sub` (lastThree !! 2))
                     penultimateMove = ((lastThree !! 2) `sub` (lastThree !! 1))
-                    penpenultimateMove = ((lastThree !! 1) `sub` (lastThree !! 0)) in
-                        (if (lastMove == penultimateMove && penultimateMove == penpenultimateMove) then (trace $ "have to switch for " ++ show path) [] else [lastMove]))
+                    penpenultimateMove = ((lastThree !! 1) `sub` (head lastThree)) in
+                        (if lastMove == penultimateMove && penultimateMove == penpenultimateMove then {-(trace $ "have to switch for " ++ show path)-} [] else [lastMove]))
 
 -- Dijkstra's algorithm
 -- 0. Store a Map.Map Vertex [(minCostInt, minCostPath)]
@@ -71,23 +71,38 @@ addToPath lines (currentPath, currentCost) newCoord = (currentPath ++ [newCoord]
 -- so e.g. the fastest to (0,3) in the example is 9 long
 -- but then we can't continue downward since we have hit a train of 3 so we need to explore other ways of reaching it
 
+-- We're analyzing the entire graph of paths (can't analyze just the graph of coordinates, because neighbors depend on the path)
+-- So we have to prune somehow
+-- I think we only want paths that beat the best known cost 
+-- wait...[(0,0),(0,1),(0,2),(1,2),(1,1),(2,1),(2,0),(1,0),(1,1),(0,1),(0,0),(1,0),(1,1),(2,1),(3,1),(3,2),(4,2),(5,2),(6,2)] is a very dumb path (goes to (0,0) twice)
+-- so we can't have that. if a neighbor is already in the path filter it out
+
+-- only last 4 matter
+trimPath :: [a] -> [a]
+trimPath path = drop (max 0 (length path - 4)) path
+
 -- Returns the cost of the minimum path
-dijkstra :: [String] -> PSQ.PSQ Path Int -> Map.Map Coord (Path, Int) -> Coord -> Int
-dijkstra lines frontier costMap end =
+dijkstra :: [String] -> PSQ.PSQ Path Int -> Set.Set Path -> Coord -> Int
+dijkstra lines frontier visited end =
     let currentMaybe = PSQ.findMin frontier in if isNothing currentMaybe then 0 {- couldn't reach end -} else
     let current = fromJust currentMaybe
         currentPath = PSQ.key current
-        currentCost = PSQ.prio current in if last currentPath == end then currentCost else
-    let neighboringPaths = map (addToPath lines (currentPath, currentCost)) (filter (inBounds lines) (neighbors currentPath))
-        neighboringPathMap = Map.fromList (map (\(path, cost) -> (last path, (path, cost))) neighboringPaths)
-        newCostMap = Map.unionWith (\(c1,i1) (c2,i2) -> if i1 < i2 then (c1,i1) else (c2,i2)) costMap neighboringPathMap
+        currentCost = PSQ.prio current
+        newVisited = Set.insert (trimPath currentPath) visited in {-trace (show currentPath) $ -}if last currentPath == end then currentCost else
+    let neighboringPaths = filter (\(p,i) -> trimPath p `Set.notMember` newVisited) (map (addToPath lines (currentPath, currentCost)) (filter (\neigh -> inBounds lines neigh && neigh `notElem` currentPath) (neighbors currentPath)))
         newFrontier = foldl (\q (key, prio) -> PSQ.insert key prio q) (PSQ.deleteMin frontier) neighboringPaths in
-        dijkstra lines newFrontier newCostMap end
+        {-trace (show neighboringPaths ++ "\n\n")-} dijkstra lines newFrontier newVisited end
 
 part1' lines = do
     -- (0,0) to (13,12)
-    let dijkstraed = dijkstra lines (PSQ.singleton [(0,0)] 0) Map.empty (12,12) in print dijkstraed
+    let dijkstraed = dijkstra lines (PSQ.singleton [(0,0)] 0) Set.empty (12,12) in print dijkstraed
     -- [(0,0),(0,1),(1,1),(1,2),(1,3),(0,3),(0,4)]...this path is the optimal one THAT IT ISN'T FINDING
+
+-- (1,1) -> 0.118s
+-- (3,3) -> 0.118s
+-- (5,5) -> 0.487s
+-- (6,6) -> 3.958s
+-- (7,7) -> 1m41.566s
 
 clear :: IO ()
 clear = printf "\027c"
