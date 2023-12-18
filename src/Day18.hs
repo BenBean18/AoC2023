@@ -158,12 +158,13 @@ xCoord (x,_) = x
 yCoord :: Coord -> Int
 yCoord (_,y) = y
 
-polygonArea :: [Coord] -> Int
-polygonArea coords = (polygonArea' coords{- + xCoord (last coords) * yCoord (head coords) - xCoord (head coords) * yCoord (last coords)-}) `div` 2
+numTrenched :: [Coord] -> Int
+numTrenched [_] = 0
+numTrenched (c0:c1:coords) =
+    length (range c0 c1) - 1 + numTrenched (c1:coords)
 
--- sorting coordinates by angle
-sortCoords :: [Coord] -> [Coord]
-sortCoords = sortBy (compare `on` (\(x,y) -> atan2 (fromIntegral y) (fromIntegral x)))
+polygonArea :: [Coord] -> Int
+polygonArea coords = polygonArea' coords `div` 2
 
 getDirection2 :: Char -> Coord
 getDirection2 '3' = (0,1)
@@ -180,14 +181,13 @@ parseMove2 s =
         magnitude = fst $ head $ readHex (init color) in direction `mul` magnitude
 
 part2' lines =
-    let coordList = reverse $ getCoordList lines -- this is clockwise
+    let coordList = reverse $ getCoordList lines -- this is clockwise so we have to reverse
         midX = maximum (map xCoord coordList) `div` 2
         midY = maximum (map yCoord coordList) `div` 2
-        coordListCentered = map (\(x,y) -> (x - 5, y - 5)) coordList
         trench = buildTrench (reverse coordList) (buildTrench coordList (emptyTrench coordList))
-        area = polygonArea coordListCentered in do
+        area = polygonArea coordList in do
             print coordList
-            print (map (\(x,y) -> atan2 (fromIntegral y) (fromIntegral x)) coordListCentered)
+            print (numTrenched coordList)
             putStrLn (printLines trench)
             print area
 
