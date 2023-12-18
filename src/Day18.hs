@@ -97,13 +97,13 @@ range :: Coord -> Coord -> [Coord]
 range (x1,y1) (x2,y2) = concatMap (\y -> map (\x -> (x,y)) [min x1 x2..max x1 x2]) [min y1 y2..max y1 y2]
 
 emptyTrench :: [Coord] -> [[Bool]]
-emptyTrench coords = replicate (maximum (map yCoord coords) + 1) (replicate (maximum (map xCoord coords) + 1) False)
+emptyTrench coords = replicate (maximum (map yCoord coords) + 1 + 2) (replicate (maximum (map xCoord coords) + 1 + 2) False)
 
 -- Find 2D array where true = in wall, false = not in wall
 buildTrench :: [Coord] -> [[Bool]] -> [[Bool]]
 buildTrench [_,_,_] l = l
 buildTrench (c0:c1:coords) currentList =
-    let newList = foldl (flip (replace2D True)) currentList (range c0 c1) in buildTrench (c1:coords) newList
+    let newList = foldl (\l (x,y) -> replace2D True (x+1, y+1) l) currentList (range c0 c1) in buildTrench (c1:coords) newList
 
 -- wall parity! even = outside, odd = inside
 -- ugh but this doesn't work since if the wall is parallel to you...
@@ -121,29 +121,36 @@ at charList (x,y) = charList !! y !! x
 inBounds :: [[a]] -> Coord -> Bool
 inBounds charList (xc,yc) = not (xc < 0 || yc < 0 || xc >= length (head charList) || yc >= length charList)
 
+-- can't go from wall to non wall
 canGo :: [[Bool]] -> Coord -> Coord -> Bool
-canGo bools c1 c2 = not (at bools c1 && not (at bools c2))
+canGo bools c1 c2 = not (at bools c2)
 
 neighboringCoords :: [[Bool]] -> Coord -> [Coord]
 neighboringCoords chars c =
-    let allDirs = filter (inBounds chars) (map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)]) in filter (canGo chars c) allDirs
+    let allDirs = filter (inBounds chars) (map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)]) in filter (\ch -> not (at chars (xCoord ch, yCoord ch))) allDirs
 
 -- flood fill is easier
-bfsFill :: [[Bool]] -> Set.Set Coord -> [Coord] -> Int
-bfsFill _ _ [] = 0
+bfsFill :: [[Bool]] -> Set.Set Coord -> [Coord] -> Set.Set Coord
+bfsFill _ v [] = v
 bfsFill trench visited (current:frontier) =
-    if current `Set.member` visited then 0 + bfsFill trench visited frontier
+    if current `Set.member` visited then bfsFill trench visited frontier
     else
-        let neighbors = filter (`Set.notMember` visited) (neighboringCoords trench current) in 1 + bfsFill trench (Set.insert current visited) (frontier ++ neighbors)
+        let neighbors = filter (`Set.notMember` visited) (neighboringCoords trench current) in bfsFill trench (Set.insert current visited) (frontier ++ neighbors)
 
+printLine :: [Bool] -> String
+printLine bools = map (\b -> if b then '#' else '.') bools
+
+printLines :: [[Bool]] -> String
+printLines bools = concatMap (\boolList -> printLine boolList ++ "\n") bools
 
 -- Part 1
 part1' lines =
     let coordList = getCoordList lines
-        trench = reverse $ buildTrench coordList (emptyTrench coordList)
-        area = bfsFill trench Set.empty [(1,1)] in do
-        print coordList
-        print trench
+        trench = buildTrench (reverse coordList) (buildTrench coordList (emptyTrench coordList))
+        totalArea = (length trench) * (length (head trench))
+        outsideArea = bfsFill trench Set.empty [(0,0)]
+        area = totalArea - Set.size outsideArea in do
+        putStrLn (printLines trench)
         print area
 
 part1 = do
@@ -162,6 +169,9 @@ time lines =
         bench "part1" $ nfIO $ part1' lines
       , bench "part2" $ nfIO $ part2' lines
     ]
+
+-- 19604 too low
+-- 85992 too high
 
 benchmark = do
     lines <- getLines "day18/input.txt"
