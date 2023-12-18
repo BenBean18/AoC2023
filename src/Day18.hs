@@ -185,11 +185,15 @@ part2' lines =
         midX = maximum (map xCoord coordList) `div` 2
         midY = maximum (map yCoord coordList) `div` 2
         trench = buildTrench (reverse coordList) (buildTrench coordList (emptyTrench coordList))
-        area = polygonArea coordList in do
-            print coordList
-            print (numTrenched coordList)
-            putStrLn (printLines trench)
-            print area
+        trenchArea = numTrenched coordList
+        area = polygonArea coordList
+        finalArea = area - (trenchArea `div` 2) + 1 + trenchArea in do
+            -- print (map parseMove lines)
+            -- print coordList
+            -- print (numTrenched coordList)
+            -- print (numTrenched (reverse $ getCoordList lines))
+            -- putStrLn (printLines trench)
+            print finalArea
 
 part2 = do
     lines <- getLines "day18/input.txt"

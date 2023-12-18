@@ -1,0 +1,15 @@
+#!/bin/bash
+
+dev_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+dev_dir="$( dirname "$dev_dir" )"
+
+set -e
+set -o pipefail
+
+docker run "$@" -it --net=host -v  /tmp/.X11-unix:/tmp/.X11-unix \
+ -v /dev:/dev \
+ -v $HOME/2023RobotCode:/home/ubuntu/.2023RobotCode.readonly \
+ -v $HOME/AoC2023:/home/ubuntu/AoC2023 \
+ --ipc=host \
+ --shm-size=8G \
+ -e DISPLAY=$DISPLAY -e NVIDIA_DRIVER_CAPABILITIES=all --privileged --user ubuntu benbean18/zebramites2023:arm64v8 /bin/bash
