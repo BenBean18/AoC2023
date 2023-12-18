@@ -16,6 +16,7 @@ import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
 import Numeric (readHex)
+import Data.Function (on)
 
 -- yay time to use the cool graphics trick of how many walls you enter!
 -- or the shoelace theorem
@@ -56,33 +57,6 @@ getCoordList' = foldl (\currentList str -> head currentList `add` parseMove str 
 getCoordList :: [String] -> [Coord]
 getCoordList lines =
     let l = getCoordList' lines in map (\c -> c `sub` (minimum (map xCoord l), minimum (map yCoord l))) l
-
--- shoelace formula! https://en.wikipedia.org/wiki/Shoelace_formula
-polygonArea' :: [Coord] -> Int
-polygonArea' [_,_] = 0
-polygonArea' ((x0,y0):(x1,y1):coords) = x0*y1 - x1*y0 + polygonArea' ((x1,y1):coords)
-
-{-
-#######
-#.....#
-###...#
-..#...#
-..#...#
-###.###
-#...#..
-##..###
-.#....#
-.######
--}
-
-xCoord :: Coord -> Int
-xCoord (x,_) = x
-
-yCoord :: Coord -> Int
-yCoord (_,y) = y
-
-polygonArea :: [Coord] -> Int
-polygonArea coords = (polygonArea' coords + xCoord (last coords) * yCoord (head coords) - xCoord (head coords) * yCoord (last coords)) `div` 2
 
 -- Trying again using the cool graphics wall trick
 
@@ -139,16 +113,16 @@ bfsFill trench visited (current:frontier) =
         let neighbors = filter (`Set.notMember` visited) (neighboringCoords trench current) in bfsFill trench (Set.insert current visited) (frontier ++ neighbors)
 
 printLine :: [Bool] -> String
-printLine bools = map (\b -> if b then '#' else '.') bools
+printLine = map (\b -> if b then '#' else '.')
 
 printLines :: [[Bool]] -> String
-printLines bools = concatMap (\boolList -> printLine boolList ++ "\n") bools
+printLines = concatMap (\boolList -> printLine boolList ++ "\n")
 
 -- Part 1
 part1' lines =
     let coordList = getCoordList lines
         trench = buildTrench (reverse coordList) (buildTrench coordList (emptyTrench coordList))
-        totalArea = (length trench) * (length (head trench))
+        totalArea = length trench * length (head trench)
         outsideArea = bfsFill trench Set.empty [(0,0)]
         area = totalArea - Set.size outsideArea in do
         putStrLn (printLines trench)
@@ -159,6 +133,37 @@ part1 = do
     part1' lines
 
 -- Part 2
+
+-- shoelace formula! https://en.wikipedia.org/wiki/Shoelace_formula
+polygonArea' :: [Coord] -> Int
+polygonArea' [_] = 0
+polygonArea' ((x0,y0):(x1,y1):coords) = ((x1 - x0) * (y1 + y0)) + polygonArea' ((x1,y1):coords)
+
+{-
+#######
+#.....#
+###...#
+..#...#
+..#...#
+###.###
+#...#..
+##..###
+.#....#
+.######
+-}
+
+xCoord :: Coord -> Int
+xCoord (x,_) = x
+
+yCoord :: Coord -> Int
+yCoord (_,y) = y
+
+polygonArea :: [Coord] -> Int
+polygonArea coords = (polygonArea' coords{- + xCoord (last coords) * yCoord (head coords) - xCoord (head coords) * yCoord (last coords)-}) `div` 2
+
+-- sorting coordinates by angle
+sortCoords :: [Coord] -> [Coord]
+sortCoords = sortBy (compare `on` (\(x,y) -> atan2 (fromIntegral y) (fromIntegral x)))
 
 getDirection2 :: Char -> Coord
 getDirection2 '3' = (0,1)
@@ -174,7 +179,17 @@ parseMove2 s =
         direction = getDirection (head (head theWords))
         magnitude = fst $ head $ readHex (init color) in direction `mul` magnitude
 
-part2' lines = print "Hi"
+part2' lines =
+    let coordList = reverse $ getCoordList lines -- this is clockwise
+        midX = maximum (map xCoord coordList) `div` 2
+        midY = maximum (map yCoord coordList) `div` 2
+        coordListCentered = map (\(x,y) -> (x - 5, y - 5)) coordList
+        trench = buildTrench (reverse coordList) (buildTrench coordList (emptyTrench coordList))
+        area = polygonArea coordListCentered in do
+            print coordList
+            print (map (\(x,y) -> atan2 (fromIntegral y) (fromIntegral x)) coordListCentered)
+            putStrLn (printLines trench)
+            print area
 
 part2 = do
     lines <- getLines "day18/input.txt"
