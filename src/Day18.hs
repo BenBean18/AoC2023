@@ -15,6 +15,7 @@ import Data.Maybe
 import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
+import Numeric (readHex)
 
 -- yay time to use the cool graphics trick of how many walls you enter!
 -- or the shoelace theorem
@@ -158,6 +159,21 @@ part1 = do
     part1' lines
 
 -- Part 2
+
+getDirection2 :: Char -> Coord
+getDirection2 '3' = (0,1)
+getDirection2 '1' = (0,-1)
+getDirection2 '2' = (-1,0)
+getDirection2 '0' = (1,0)
+
+-- "about to be destroyed by part 2" hmm :)
+parseMove2 :: String -> Coord
+parseMove2 s =
+    let theWords = words s
+        color = drop 2 (init (last theWords))
+        direction = getDirection (head (head theWords))
+        magnitude = fst $ head $ readHex (init color) in direction `mul` magnitude
+
 part2' lines = print "Hi"
 
 part2 = do
