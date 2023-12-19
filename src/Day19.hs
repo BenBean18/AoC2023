@@ -60,9 +60,30 @@ parseWorkflow s =
         origConditions = splitOn "," content
         defaultOutput = last origConditions
         conditions = init origConditions
-        wf rating = fromJust (head (filter isJust (map (flip parseCondition rating) conditions) ++ [Just defaultOutput])) in (trace $ show conditions) (name, wf)
+        wf rating = fromJust (head (filter isJust (map (flip parseCondition rating) conditions) ++ [Just defaultOutput])) in (name, wf)
 
-part1' lines = print "Hi"
+runWorkflows :: WorkflowMap -> Rating -> String -> Bool
+runWorkflows _ _ "A" = True
+runWorkflows _ _ "R" = False
+runWorkflows m r s =
+    let wf = m Map.! s in runWorkflows m r (wf r)
+
+parseWorkflows :: [String] -> WorkflowMap
+parseWorkflows lines = foldl (\m (s,w) -> Map.insert s w m) Map.empty (map parseWorkflow lines)
+
+ratingSum :: Rating -> Int
+ratingSum r = sum (map (getProperty r) "xmas")
+
+isAccepted :: WorkflowMap -> Rating -> Bool
+isAccepted m r = runWorkflows m r "in"
+
+part1' lines =
+    let [workflowsStr,ratingsStr] = splitOn [""] lines
+        workflowMap = parseWorkflows workflowsStr
+        ratings = map parseRating ratingsStr
+        accepted = filter (isAccepted workflowMap) ratings
+        score = sum (map ratingSum accepted) in do
+            print score
 
 part1 = do
     lines <- getLines "day19/input.txt"
