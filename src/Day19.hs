@@ -181,8 +181,11 @@ ghci> reachableRange "in{s<1351:px,qqz}" "px"
 fromList [('a',[1 +=+ 4000]),('m',[1 +=+ 4000]),('s',[1 +=* 1351]),('x',[1 +=+ 4000])]
 -}
 
+-- have to be careful with something like lnx{m>1548:A,A}
+-- (two references to the same thing)
+
 unifyReachableRanges :: [Map.Map Char [Range Int]] -> Map.Map Char [Range Int]
-unifyReachableRanges maps =
+unifyReachableRanges maps = if Map.empty `elem` maps then Map.empty else
     let xs = map (Map.! 'x') maps
         ms = map (Map.! 'm') maps
         as = map (Map.! 'a') maps
@@ -191,7 +194,8 @@ unifyReachableRanges maps =
 dfsReachableRange :: [String] -> [String] -> String -> Map.Map Char [Range Int]
 dfsReachableRange _ _ "in" = defaultMap
 dfsReachableRange lines ignore output =
-    let firstOccur = head (filter (\line -> snd (reachableRange line output) /= defaultMap && (fst (reachableRange line output) `notElem` ignore || output /= "A")) lines)
+    let occurs = filter (\line -> snd (reachableRange line output) /= defaultMap && (output /= "A" || (trace $ (if fst (reachableRange line output) `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output else "")) fst (reachableRange line output) `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
+    let firstOccur = head occurs
         (name, rr) = reachableRange firstOccur output in unifyReachableRanges [rr, dfsReachableRange lines ignore name]
 
 rangeSize :: [Range Int] -> Int
@@ -207,6 +211,7 @@ part2' lines =
         acceptancePaths = map (\toExclude -> dfsReachableRange workflows (map (head . splitOn "{") toExclude) "A") exclusionList in do
         print exclusionList
         print acceptancePaths
+        print (map numReachable acceptancePaths)
         print (sum (map numReachable acceptancePaths))
 
 part2 = do
