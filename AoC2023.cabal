@@ -31,6 +31,6 @@ executable AoC2023
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends:    base, text, array, regex-pcre-builtin, regex-base, containers, criterion, split, mod, ghc, PSQueue, multiset, IntervalMap, Unique, hmatrix, memoize
+    build-depends:    base, text, array, regex-pcre-builtin, regex-base, containers, criterion, split, mod, ghc, PSQueue, multiset, IntervalMap, Unique, hmatrix, memoize, range
     hs-source-dirs:   src
     default-language: Haskell2010

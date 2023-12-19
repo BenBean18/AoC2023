@@ -17,6 +17,8 @@ import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
 
+import Data.Range
+
 -- Part 1
 data Rating = Rating {x :: Int, m :: Int, a :: Int, s :: Int} deriving (Eq, Show, Ord) -- very clever naming eric wastl
 type WorkflowMap = Map.Map String Workflow
@@ -111,8 +113,45 @@ part1 = do
 -- find references to hdj:
 -- qqz{s>2770:qs,m<1801:hdj,R} -> if x, not (m > 838), a > 1716, not (s > 2770), and qqz
 -- find references to qqz:
+-- in{s<1351:px,qqz} YAY -> if x, not (m > 838), a > 1716, not (s > 2770), not (s < 1351)
 
+-- combining conditions is interesting -- how do we resolve not (s > 2770) AND not (s < 1351)
+-- ...honestly probably ranges
+-- intersection of (difference of [1..4000], [2770+1..4000]), (difference of [1..4000], [1..1351-1])
 
+{-
+how to find opposite valid numbers (if we need to check for NOT a condition):
+intersection (invert [1 *=+ 3]) [1 +=+ 4000]
+[SingletonRange 1,3 *=+ 4000]
+
+ghci> notCondition (rangeForCondition "s>2770:bcd")
+1 +=+ 2770
+ghci> r1 = notCondition (rangeForCondition "s>2770:bcd")
+ghci> r2 = notCondition (rangeForCondition "s<1351:fksf")
+ghci> r1
+1 +=+ 2770
+ghci> r2
+1351 +=+ 4000
+ghci> union [r1] [r2]
+[1 +=+ 4000]
+ghci> inter
+interact      intersection
+ghci> intersection [r1] [r2]
+[1351 +=+ 2770]
+-}
+
+rangeForCondition :: String -> [Range Int]
+rangeForCondition s =
+    let [conditionStr,output] = splitOn ":" s
+        property = head conditionStr
+        condition = head (tail conditionStr)
+        num = read (drop 2 conditionStr) :: Int
+        in if condition == '>' then [num *=+ 4000] else [1 +=* num]
+
+notCondition :: [Range Int] -> [Range Int]
+notCondition r = intersection (invert r) [1 +=+ 4000]
+
+-- validNums :: 
 part2' lines = print "Hi"
 
 part2 = do
