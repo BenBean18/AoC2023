@@ -90,6 +90,16 @@ part1 = do
     part1' lines
 
 -- Part 2
+
+-- Idea: "reverse" the problem by starting at A
+-- so for example, take the example input
+-- find all references to A and go all the way down back to in using a DFS
+-- px{a<2006:qkq,m>2090:A,rfg}. A is reached if m > 2090 and (px)
+-- now find all references to (px)
+-- in{s<1351:px,qqz}. A is reached if m > 2090 and s < 1351 (and implicitly, if a or x are anything).
+-- so that's (4000-2090) * (1351-1) * 4000 * 4000 accepted ratings
+-- (adding 1 because if it is x)
+
 part2' lines = print "Hi"
 
 part2 = do
