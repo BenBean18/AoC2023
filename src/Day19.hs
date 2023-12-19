@@ -151,14 +151,14 @@ rangeForCondition s =
 notCondition :: [Range Int] -> [Range Int]
 notCondition r = intersection (invert r) [1 +=+ 4000]
 
-reachableRange :: String -> String -> Map.Map Char [Range Int]
+reachableRange :: String -> String -> (String, Map.Map Char [Range Int])
 reachableRange workflow output =
     let name = head (splitOn "{" workflow)
         content = init (last (splitOn "{" workflow))
         origConditions = splitOn "," content
         defaultOutput = last origConditions
         conditionStrs = init origConditions
-        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in reachableRange' conditions output defaultMap
+        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in (name, reachableRange' conditions output defaultMap)
 
 defaultMap :: Map.Map Char [Range Int]
 defaultMap = Map.fromList [('x', [1 +=+ 4000]),('m', [1 +=+ 4000]),('a', [1 +=+ 4000]),('s', [1 +=+ 4000])]
@@ -188,7 +188,15 @@ unifyReachableRanges maps =
         as = map (Map.! 'a') maps
         ss = map (Map.! 's') maps in Map.fromList [('x', foldl intersection [1 +=+ 4000] xs), ('m', foldl intersection [1 +=+ 4000] ms), ('a', foldl intersection [1 +=+ 4000] as), ('s', foldl intersection [1 +=+ 4000] ss)]
 
-part2' lines = print "Hi"
+dfsReachableRange :: [String] -> [String] -> String -> Map.Map Char [Range Int]
+dfsReachableRange _ _ "in" = defaultMap
+dfsReachableRange lines ignore output =
+    let firstOccur = head (filter (\line -> snd (reachableRange line output) /= defaultMap && fst (reachableRange line output) `notElem` ignore) lines)
+        (name, rr) = reachableRange firstOccur output in unifyReachableRanges [rr, dfsReachableRange lines ignore name]
+
+part2' lines =
+    let [workflows,ratingsStr] = splitOn [""] lines in do
+        print $ dfsReachableRange workflows ["px"] "A"
 
 part2 = do
     lines <- getLines "day19/input.txt"
