@@ -170,7 +170,7 @@ reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char [Ra
 -- note: here there will be only one x, m, a, s
 reachableRange' [] _ _ = defaultMap -- unreachable :(... so we'll represent it as always reachable
 reachableRange' (condition:conditions) name currentMap =
-    let ((p, r), out) = condition in 
+    let ((p, r), out) = condition in
         if out == name then if r /= [1 +=+ 4000] then Map.insert p r currentMap else currentMap
         else reachableRange' conditions name (Map.insert p (notCondition r) currentMap)
 
@@ -191,12 +191,23 @@ unifyReachableRanges maps =
 dfsReachableRange :: [String] -> [String] -> String -> Map.Map Char [Range Int]
 dfsReachableRange _ _ "in" = defaultMap
 dfsReachableRange lines ignore output =
-    let firstOccur = head (filter (\line -> snd (reachableRange line output) /= defaultMap && fst (reachableRange line output) `notElem` ignore) lines)
+    let firstOccur = head (filter (\line -> snd (reachableRange line output) /= defaultMap && (fst (reachableRange line output) `notElem` ignore || output /= "A")) lines)
         (name, rr) = reachableRange firstOccur output in unifyReachableRanges [rr, dfsReachableRange lines ignore name]
 
+rangeSize :: [Range Int] -> Int
+rangeSize [SpanRange lower upper] = boundValue upper - boundValue lower - (if boundType lower == Exclusive then 1 else 0) - (if boundType upper == Exclusive then 1 else 0) + 1
+
+numReachable :: Map.Map Char [Range Int] -> Int
+numReachable m =
+    let ranges = Map.elems m in product (map rangeSize ranges)
+
 part2' lines =
-    let [workflows,ratingsStr] = splitOn [""] lines in do
-        print $ dfsReachableRange workflows ["px"] "A"
+    let [workflows,ratingsStr] = splitOn [""] lines
+        exclusionList = map (`take` workflows) [0..length workflows - 1]
+        acceptancePaths = map (\toExclude -> dfsReachableRange workflows (map (head . splitOn "{") toExclude) "A") exclusionList in do
+        print exclusionList
+        print acceptancePaths
+        print (sum (map numReachable acceptancePaths))
 
 part2 = do
     lines <- getLines "day19/input.txt"
