@@ -140,18 +140,40 @@ ghci> intersection [r1] [r2]
 [1351 +=+ 2770]
 -}
 
-rangeForCondition :: String -> [Range Int]
+rangeForCondition :: String -> ((Char, [Range Int]), String)
 rangeForCondition s =
     let [conditionStr,output] = splitOn ":" s
         property = head conditionStr
         condition = head (tail conditionStr)
         num = read (drop 2 conditionStr) :: Int
-        in if condition == '>' then [num *=+ 4000] else [1 +=* num]
+        in if condition == '>' then ((property, [num *=+ 4000]), output) else ((property, [1 +=* num]), output)
 
 notCondition :: [Range Int] -> [Range Int]
 notCondition r = intersection (invert r) [1 +=+ 4000]
 
--- validNums :: 
+reachableRange :: String -> String -> Map.Map Char [Range Int]
+reachableRange workflow output =
+    let name = head (splitOn "{" workflow)
+        content = init (last (splitOn "{" workflow))
+        origConditions = splitOn "," content
+        defaultOutput = last origConditions
+        conditionStrs = init origConditions
+        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in reachableRange' conditions output defaultMap
+
+defaultMap :: Map.Map Char [Range Int]
+defaultMap = Map.fromList [('x', [1 +=+ 4000]),('m', [1 +=+ 4000]),('a', [1 +=+ 4000]),('s', [1 +=+ 4000])]
+
+reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char [Range Int] -> Map.Map Char [Range Int]
+-- go through conditions left to right
+-- if rangeForCondition of the string leads to not the output then add notCondition (that range) to the list
+-- if rangeForCondition of the string leads to the output then stop there
+-- note: here there will be only one x, m, a, s
+reachableRange' [] _ _ = Map.empty -- unreachable :(
+reachableRange' (condition:conditions) name currentMap =
+    let ((p, r), out) = condition in 
+        if out == name then currentMap
+        else reachableRange' conditions name (Map.insert p (notCondition r) currentMap)
+
 part2' lines = print "Hi"
 
 part2 = do
