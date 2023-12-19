@@ -205,9 +205,13 @@ numReachable :: Map.Map Char [Range Int] -> Int
 numReachable m =
     let ranges = Map.elems m in product (map rangeSize ranges)
 
+-- I think the key here is all *distinct* possibilities
+-- oh wait never mind, this 
+
 part2' lines =
     let [workflows,ratingsStr] = splitOn [""] lines
-        exclusionList = map (`take` workflows) [0..length workflows - 1]
+        acceptedWorkflows = filter (\workflow -> 'A' `elem` workflow) workflows -- haha
+        exclusionList = map (`take` acceptedWorkflows) [0..length acceptedWorkflows-1]
         acceptancePaths = map (\toExclude -> dfsReachableRange workflows (map (head . splitOn "{") toExclude) "A") exclusionList in do
         print exclusionList
         print acceptancePaths
