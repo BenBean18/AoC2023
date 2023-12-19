@@ -91,14 +91,27 @@ part1 = do
 
 -- Part 2
 
--- Idea: "reverse" the problem by starting at A
+-- Idea: "reverse" the problem by starting at A. Don't want to start at "in" because you have to consider more possibilities that way.
 -- so for example, take the example input
--- find all references to A and go all the way down back to in using a DFS
--- px{a<2006:qkq,m>2090:A,rfg}. A is reached if m > 2090 and (px)
+-- find all references to A (line by line) and go all the way down back to in using a DFS
+-- px{a<2006:qkq,m>2090:A,rfg}. A is reached if m > 2090, not (a < 2006), and (px)
 -- now find all references to (px)
--- in{s<1351:px,qqz}. A is reached if m > 2090 and s < 1351 (and implicitly, if a or x are anything).
--- so that's (4000-2090) * (1351-1) * 4000 * 4000 accepted ratings
+-- in{s<1351:px,qqz}. A is reached if m > 2090, not (a < 2006), and s < 1351 (and implicitly, if x is anything).
+-- so that's 4000 * (4000-2090) * (4000-2006) * (1351-1) accepted ratings
 -- (adding 1 because if it is x)
+
+-- mercifully, it looks like only one thing points to each thing in the input (each node has only one way to get to it -- only one in-degree)
+-- so this probably means we don't need to memoize the function since the memo will never be used?
+
+-- next reference to A:
+-- pv{a>1716:R,A} -> if x, m, a > 1716, s and pv
+-- find references to pv:
+-- so this is interesting, hdj accepts as well. i think we ignore and come back to it later to avoid double counting
+-- hdj{m>838:A,pv} -> if x, not (m > 838), a > 1716, s, and hdj
+-- find references to hdj:
+-- qqz{s>2770:qs,m<1801:hdj,R} -> if x, not (m > 838), a > 1716, not (s > 2770), and qqz
+-- find references to qqz:
+
 
 part2' lines = print "Hi"
 
