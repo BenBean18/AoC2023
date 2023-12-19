@@ -194,7 +194,7 @@ unifyReachableRanges maps = if Map.empty `elem` maps then Map.empty else
 dfsReachableRange :: [String] -> [String] -> String -> Map.Map Char [Range Int]
 dfsReachableRange _ _ "in" = defaultMap
 dfsReachableRange lines ignore output =
-    let occurs = filter (\line -> snd (reachableRange line output) /= defaultMap && (output /= "A" || (trace $ (if fst (reachableRange line output) `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output else "")) fst (reachableRange line output) `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
+    let occurs = filter (\line -> snd (reachableRange line output) /= defaultMap && (output /= "A" || (trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore)) line `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
     let firstOccur = head occurs
         (name, rr) = reachableRange firstOccur output in unifyReachableRanges [rr, dfsReachableRange lines ignore name]
 
@@ -212,7 +212,7 @@ part2' lines =
     let [workflows,ratingsStr] = splitOn [""] lines
         acceptedWorkflows = filter (\workflow -> 'A' `elem` workflow) workflows -- haha
         exclusionList = map (`take` acceptedWorkflows) [0..length acceptedWorkflows-1]
-        acceptancePaths = map (\toExclude -> dfsReachableRange workflows (map (head . splitOn "{") toExclude) "A") exclusionList in do
+        acceptancePaths = map (\toExclude -> dfsReachableRange workflows toExclude "A") exclusionList in do
         print exclusionList
         print acceptancePaths
         print (map numReachable acceptancePaths)
