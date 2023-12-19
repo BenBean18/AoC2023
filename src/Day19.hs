@@ -171,8 +171,8 @@ reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char [Ra
 reachableRange' [] _ _ = defaultMap -- unreachable :(... so we'll represent it as always reachable
 reachableRange' (condition:conditions) name currentMap =
     let ((p, r), out) = condition in
-        if out == name then if r /= [1 +=+ 4000] then Map.insert p r currentMap else currentMap
-        else reachableRange' conditions name (Map.insert p (notCondition r) currentMap)
+        if out == name then if r /= [1 +=+ 4000] then reachableRange' conditions name (Map.insert p [r] currentMap) else currentMap
+        else reachableRange' conditions name (Map.insert p (foldl intersection [1 +=+ 4000] (currentMap Map.! p ++ [notCondition r])) currentMap)
 
 {-
 ghci> reachableRange "px{a<2006:qkq,m>2090:A,rfg}" "A"
@@ -183,6 +183,12 @@ fromList [('a',[1 +=+ 4000]),('m',[1 +=+ 4000]),('s',[1 +=* 1351]),('x',[1 +=+ 4
 
 -- have to be careful with something like lnx{m>1548:A,A}
 -- (two references to the same thing)
+
+-- I HATE EDGE CASES
+-- vdp{x>324:A,x<146:R,A}
+-- uhh this one too:
+-- vgh{x>1126:A,m>3898:A,ktl}
+-- so now we are dealing with range sets :cry:
 
 unifyReachableRanges :: [Map.Map Char [Range Int]] -> Map.Map Char [Range Int]
 unifyReachableRanges maps = if Map.empty `elem` maps then Map.empty else
@@ -205,8 +211,7 @@ numReachable :: Map.Map Char [Range Int] -> Int
 numReachable m =
     let ranges = Map.elems m in product (map rangeSize ranges)
 
--- I think the key here is all *distinct* possibilities
--- oh wait never mind, this 
+
 
 part2' lines =
     let [workflows,ratingsStr] = splitOn [""] lines
