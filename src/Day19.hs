@@ -168,11 +168,25 @@ reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char [Ra
 -- if rangeForCondition of the string leads to not the output then add notCondition (that range) to the list
 -- if rangeForCondition of the string leads to the output then stop there
 -- note: here there will be only one x, m, a, s
-reachableRange' [] _ _ = Map.empty -- unreachable :(
+reachableRange' [] _ _ = defaultMap -- unreachable :(... so we'll represent it as always reachable
 reachableRange' (condition:conditions) name currentMap =
     let ((p, r), out) = condition in 
-        if out == name then currentMap
+        if out == name then if r /= [1 +=+ 4000] then Map.insert p r currentMap else currentMap
         else reachableRange' conditions name (Map.insert p (notCondition r) currentMap)
+
+{-
+ghci> reachableRange "px{a<2006:qkq,m>2090:A,rfg}" "A"
+fromList [('a',[2006 +=+ 4000]),('m',[2090 *=+ 4000]),('s',[1 +=+ 4000]),('x',[1 +=+ 4000])]
+ghci> reachableRange "in{s<1351:px,qqz}" "px"
+fromList [('a',[1 +=+ 4000]),('m',[1 +=+ 4000]),('s',[1 +=* 1351]),('x',[1 +=+ 4000])]
+-}
+
+unifyReachableRanges :: [Map.Map Char [Range Int]] -> Map.Map Char [Range Int]
+unifyReachableRanges maps =
+    let xs = map (Map.! 'x') maps
+        ms = map (Map.! 'm') maps
+        as = map (Map.! 'a') maps
+        ss = map (Map.! 's') maps in Map.fromList [('x', foldl intersection [1 +=+ 4000] xs), ('m', foldl intersection [1 +=+ 4000] ms), ('a', foldl intersection [1 +=+ 4000] as), ('s', foldl intersection [1 +=+ 4000] ss)]
 
 part2' lines = print "Hi"
 
