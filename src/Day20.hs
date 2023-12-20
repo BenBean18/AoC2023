@@ -95,20 +95,20 @@ part1 = do
     part1' lines
 
 -- Part 2
-processStateEarlyExit :: CircuitState -> Int -> Int -> (CircuitState, Int, Int, Bool)
-processStateEarlyExit CircuitState { pulses = [], states = stateMap, destMap = dMap } nHigh nLow  = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, nHigh, nLow, False)
-processStateEarlyExit CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } nHigh nLow = {-(trace $show pulse)$-}
+processStateEarlyExit :: CircuitState -> (CircuitState, Bool)
+processStateEarlyExit CircuitState { pulses = [], states = stateMap, destMap = dMap }  = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, False)
+processStateEarlyExit CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } = {-(trace $show pulse)$-}
     let dest = destination pulse
         (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
         newStates = Map.insert dest newDestState stateMap in
-            if destination pulse == "rx" && not (isHigh pulse) then (CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }, (nHigh + if isHigh pulse then 1 else 0), (nLow + if isHigh pulse then 0 else 1), True)
-            else processStateEarlyExit CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap } (nHigh + if isHigh pulse then 1 else 0) (nLow + if isHigh pulse then 0 else 1)
+            if destination pulse == "rx" && not (isHigh pulse) then (CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }, True)
+            else processStateEarlyExit CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }
 
-checkRX :: [String] -> [Pulse] -> (CircuitState,Int,Int) -> Int -> Int
-checkRX lines initialPulses (s,h,l) i =
-    let (newState,newH,newL,exit) = processStateEarlyExit (s { pulses = initialPulses }) h (l+1) in
+checkRX :: [String] -> [Pulse] -> CircuitState -> Int -> Int
+checkRX lines initialPulses s i = (trace $ show i) (
+    let (newState,exit) = processStateEarlyExit (s { pulses = initialPulses }) in
         if exit then i+1
-        else checkRX lines initialPulses (newState,newH,newL) (i+1)
+        else checkRX lines initialPulses newState (i+1))
 
 {-
 Some thinking:
@@ -119,8 +119,10 @@ Either a ton of optimization to evaluate super quickly, or some smart working ba
 I'm liking working backwards, but that seems horrible to evaluate
 For rx to be sent a low pulse, hp must be sent all high pulses (conjunction)
 For hp to be sent a high pulse, sn, rf, vq, and sr must all send high pulses sequentially (no low in between)
-
+LCM or something?
 .........this sucks
+
+Dynamic programming could be great here, so we can try memoizing
 -}
 
 part2' lines =
@@ -128,7 +130,7 @@ part2' lines =
         initialPulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState_ Map.! "broadcaster"]
         initialState = initialState_ { pulses = initialPulses, destMap = Map.insert "rx" [] (destMap initialState_), states = Map.insert "rx" (FlipFlopState False) (states initialState_) }
         -- 1 since we start with an initial low pulse from the button
-        r = checkRX lines initialPulses (initialState,0,0) 0
+        r = checkRX lines initialPulses initialState 0
         {-finalState = processState initialState 0 0-} in do
             print r
 
