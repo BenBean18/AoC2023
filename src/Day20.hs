@@ -110,6 +110,19 @@ checkRX lines initialPulses (s,h,l) i =
         if exit then i+1
         else checkRX lines initialPulses (newState,newH,newL) (i+1)
 
+{-
+Some thinking:
+
+If there is a cycle, it's not within 1 million iterations (since I got OOM killed at 954xxx and a cycle MUST include a low pulse sent to rx if it is ever going to happen)
+So cycle detection probably won't work
+Either a ton of optimization to evaluate super quickly, or some smart working backwards solution
+I'm liking working backwards, but that seems horrible to evaluate
+For rx to be sent a low pulse, hp must be sent all high pulses (conjunction)
+For hp to be sent a high pulse, sn, rf, vq, and sr must all send high pulses sequentially (no low in between)
+
+.........this sucks
+-}
+
 part2' lines =
     let initialState_ = parseLines lines
         initialPulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState_ Map.! "broadcaster"]
