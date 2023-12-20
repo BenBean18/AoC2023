@@ -2,7 +2,7 @@ module Day19 where
 
 import Utilities
 import Data.List.Split
-import Data.List
+import Data.List ()
 import Data.Text (pack, unpack, replace, isInfixOf)
 import Text.Regex.Base
 import Text.Regex.PCRE
@@ -158,21 +158,33 @@ reachableRange workflow output =
         origConditions = splitOn "," content
         defaultOutput = last origConditions
         conditionStrs = init origConditions
-        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in (name, reachableRange' conditions output defaultMap)
+        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in {-(trace $ show conditions)-} (name, fillMap $ reachableRange' conditions output emptyMap False)
 
 defaultMap :: Map.Map Char [Range Int]
 defaultMap = Map.fromList [('x', [1 +=+ 4000]),('m', [1 +=+ 4000]),('a', [1 +=+ 4000]),('s', [1 +=+ 4000])]
 
-reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char [Range Int] -> Map.Map Char [Range Int]
+emptyMap :: Map.Map Char [Range Int]
+emptyMap = Map.fromList [('x', []),('m', []),('a', []),('s', [])]
+
+reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char [Range Int] -> Bool -> Map.Map Char [Range Int]
 -- go through conditions left to right
 -- if rangeForCondition of the string leads to not the output then add notCondition (that range) to the list
 -- if rangeForCondition of the string leads to the output then stop there
 -- note: here there will be only one x, m, a, s
-reachableRange' [] _ _ = defaultMap -- unreachable :(... so we'll represent it as always reachable
-reachableRange' (condition:conditions) name currentMap =
+reachableRange' [] _ m found = if found then m else defaultMap
+reachableRange' (condition:conditions) name currentMap found =
     let ((p, r), out) = condition in
-        if out == name then if r /= [1 +=+ 4000] then reachableRange' conditions name (Map.insert p [r] currentMap) else currentMap
-        else reachableRange' conditions name (Map.insert p (foldl intersection [1 +=+ 4000] (currentMap Map.! p ++ [notCondition r])) currentMap)
+        if out == name then if r /= [1 +=+ 4000] then reachableRange' conditions name (Map.insert p (union (currentMap Map.! p) r) currentMap) True else currentMap
+        else if not found then reachableRange' conditions name (Map.insert p ((currentMap Map.! p) `union` notCondition r) currentMap) found
+        else currentMap
+
+fillMap :: Map.Map Char [Range Int] -> Map.Map Char [Range Int]
+fillMap m =
+    let xs = if m Map.! 'x' == [] then [1 +=+ 4000] else m Map.! 'x'
+        ms = if m Map.! 'm' == [] then [1 +=+ 4000] else m Map.! 'm'
+        as = if m Map.! 'a' == [] then [1 +=+ 4000] else m Map.! 'a'
+        ss = if m Map.! 's' == [] then [1 +=+ 4000] else m Map.! 's' in Map.fromList [('x',xs),('m',ms),('a',as),('s',ss)]
+    
 
 {-
 ghci> reachableRange "px{a<2006:qkq,m>2090:A,rfg}" "A"
@@ -200,7 +212,7 @@ unifyReachableRanges maps = if Map.empty `elem` maps then Map.empty else
 dfsReachableRange :: [String] -> [String] -> String -> Map.Map Char [Range Int]
 dfsReachableRange _ _ "in" = defaultMap
 dfsReachableRange lines ignore output =
-    let occurs = filter (\line -> snd (reachableRange line output) /= defaultMap && (output /= "A" || (trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore)) line `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
+    let occurs = filter (\line -> {-(trace $ show output ++ " " ++ show ignore ++ " " ++ show (snd (reachableRange line output)) ++ "\n") $-} snd (reachableRange line output) /= defaultMap && (output /= "A" || {-(trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore))-} line `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
     let firstOccur = head occurs
         (name, rr) = reachableRange firstOccur output in unifyReachableRanges [rr, dfsReachableRange lines ignore name]
 
@@ -226,6 +238,12 @@ part2' lines =
 part2 = do
     lines <- getLines "day19/input.txt"
     part2' lines
+
+{-
+Correct is:
+[20576430000000,8167885440000,43392000000000,8281393428000,35328000000000,15320205000000,14486526000000,21856640000000]
+167409079868000
+-}
 
 time lines =
     withArgs ["--output", "day19.html"] $ defaultMain [
