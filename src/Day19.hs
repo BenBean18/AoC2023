@@ -247,8 +247,13 @@ dfsReachableRange lines ignore output =
         (name, rr_) = reachableRange firstOccur output
         rr = intersectAll rr_ defaultMap in {-(trace $ "selected " ++ show firstOccur ++ "\n\n\n") $-} unifyReachableRanges [rr, dfsReachableRange lines ignore name]
 
+rangeSizeR :: Range Int -> Int
+rangeSizeR (SpanRange lower upper) = boundValue upper - boundValue lower - (if boundType lower == Exclusive then 1 else 0) - (if boundType upper == Exclusive then 1 else 0) + 1
+
 rangeSize :: [Range Int] -> Int
-rangeSize [SpanRange lower upper] = boundValue upper - boundValue lower - (if boundType lower == Exclusive then 1 else 0) - (if boundType upper == Exclusive then 1 else 0) + 1
+rangeSize rs = sum $ map rangeSizeR rs
+
+-- 102838812800896 too low
 
 numReachable :: Map.Map Char [Range Int] -> Int
 numReachable m =
