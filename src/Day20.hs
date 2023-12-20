@@ -35,15 +35,12 @@ data ModuleState = FlipFlopState Bool | ConjunctionState (Map.Map String Bool) d
 data CircuitState = CircuitState { pulses :: [Pulse], states :: Map.Map String ModuleState, destMap :: Map.Map String [String] } deriving (Eq, Show, Ord)
 
 processState :: CircuitState -> CircuitState
-processState CircuitState { pulses = pulse:otherPulses, states = stateMap } =
+processState CircuitState { pulses = [], states = stateMap, destMap = dMap } = CircuitState { pulses = [], states = stateMap, destMap = dMap }
+processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } =
     let dest = destination pulse
-        high = isHigh pulse in
-
-
-
-            CircuitState { pulses = pulse:otherPulses, states = stateMap }
-    -- destination module should process the pulse and append it to the end of the pulse queue
-    -- this has the potential to modify the destination module's state
+        (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
+        newStates = Map.insert dest newDestState stateMap in
+            processState CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }
 
 processPulse :: Pulse -> ModuleState -> Map.Map String [String] -> (ModuleState, [Pulse])
 processPulse Pulse { source = src, destination = dest, isHigh = high } (FlipFlopState current) dMap =
