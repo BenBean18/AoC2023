@@ -181,9 +181,9 @@ fillSet :: [Range Int] -> [Range Int]
 fillSet s = if s == [] then [1 +=+ 4000] else s
 
 intersectWithInverted :: Map.Map Char ([Range Int],[Range Int]) -> Bool -> Map.Map Char [Range Int]
-intersectWithInverted m isDefaultWanted =
+intersectWithInverted m isDefaultWanted = {-(trace $ show isDefaultWanted ++ "\n\n\n\n") $-}
     let firstElems = map fst $ Map.elems m
-        secondElems = map snd $ Map.elems m in Map.fromList (zip (Map.keys m) (zipWith (\a b -> (trace $ "\n" ++ show a ++ " " ++ show b ++ "\n") $ if isDefaultWanted then ([1 +=+ 4001] `intersection` (invert b)) else intersection (fillSet a) (invert b)) firstElems secondElems))
+        secondElems = map snd $ Map.elems m in Map.fromList (zip (Map.keys m) (zipWith (\a b -> {-(trace $ "\n" ++ show a ++ " " ++ show b ++ "\n") $-} if isDefaultWanted then ([0 +=+ 4001] `intersection` (invert b)) else intersection (fillSet a) (invert b)) firstElems secondElems))
 
 reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char ([Range Int], [Range Int]) -> Bool -> Map.Map Char [Range Int]
 -- go through conditions left to right
@@ -206,7 +206,7 @@ reachableRange' (condition:conditions) name currentMap found =
             let reachableSet = intersection (fst (currentMap Map.! p)) (invert r)
                 unreachableSet = (union (snd (currentMap Map.! p)) r) in
             reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) found
-        else {-(trace $ show currentMap)-} intersectWithInverted currentMap False
+        else {-(trace $ show currentMap)-} intersectWithInverted currentMap (snd (last conditions) == name)
 
 fillMap :: Map.Map Char [Range Int] -> Map.Map Char [Range Int]
 fillMap m =
@@ -254,10 +254,22 @@ rangeSize :: [Range Int] -> Int
 rangeSize rs = sum $ map rangeSizeR rs
 
 -- 102838812800896 too low
+-- 102199649395509 also lower :cry:
 -- 100777448034213 is even less UGH
 
 --- and this test case fails :(
 -- xd{s>382:R,x>3636:A,s>248:A,A}
+
+-- now this one does
+-- qdx{s<3509:tfm,m>1437:A,s>3765:A,A}
+
+-- fails cnv{a>2244:R,s>3771:A,s<3731:R,A}
+-- should be everything for A, everything above 3731 for R
+
+-- the cases are (if default is wanted):
+-- excluded has things, included doesn't -> use invert excluded
+-- included has things, excluded doesn't -> use everything
+-- both excluded and included have different things
 
 numReachable :: Map.Map Char [Range Int] -> Int
 numReachable m =
