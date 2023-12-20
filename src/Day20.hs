@@ -30,6 +30,29 @@ Also, I assume part 2 will be pushing the button much more than 1000 times, whic
 Idea: store a list of states for all modules (as a Map.Map String ModuleState) and a queue of pulses to process
 -}
 
+data Pulse = Pulse { source :: String, destination :: String, isHigh :: Bool } deriving (Eq, Show, Ord)
+data ModuleState = FlipFlopState Bool | ConjunctionState (Map.Map String Bool) deriving (Eq, Show, Ord)
+data CircuitState = CircuitState { pulses :: [Pulse], states :: Map.Map String ModuleState, destMap :: Map.Map String [String] } deriving (Eq, Show, Ord)
+
+processState :: CircuitState -> CircuitState
+processState CircuitState { pulses = pulse:otherPulses, states = stateMap } =
+    let dest = destination pulse
+        high = isHigh pulse in
+
+
+
+            CircuitState { pulses = pulse:otherPulses, states = stateMap }
+    -- destination module should process the pulse and append it to the end of the pulse queue
+    -- this has the potential to modify the destination module's state
+
+processPulse :: Pulse -> ModuleState -> Map.Map String [String] -> (ModuleState, [Pulse])
+processPulse Pulse { source = src, destination = dest, isHigh = high } (FlipFlopState current) dMap =
+    let newState = if high then current else not current in
+     (FlipFlopState newState, [Pulse { source = dest, destination = d, isHigh = newState } | d <- dMap Map.! dest])
+processPulse Pulse { source = src, destination = dest, isHigh = high } (ConjunctionState current) dMap =
+    let newState = Map.insert src high current in
+     (ConjunctionState newState, [Pulse { source = dest, destination = d, isHigh = all not (Map.elems newState) } | d <- dMap Map.! dest])
+
 -- Part 1
 part1' lines = print "Hi"
 
