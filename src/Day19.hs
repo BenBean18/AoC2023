@@ -239,13 +239,13 @@ unifyReachableRanges maps = if Map.empty `elem` maps then Map.empty else
         as = map (Map.! 'a') maps
         ss = map (Map.! 's') maps in Map.fromList [('x', foldl intersection [1 +=+ 4000] xs), ('m', foldl intersection [1 +=+ 4000] ms), ('a', foldl intersection [1 +=+ 4000] as), ('s', foldl intersection [1 +=+ 4000] ss)]
 
--- dfsReachableRange :: [String] -> [String] -> String -> Map.Map Char [Range Int]
--- dfsReachableRange _ _ "in" = defaultMap
--- dfsReachableRange lines ignore output =
---     let occurs = filter (\line -> {-(trace $ show output ++ " " ++ show ignore ++ " " ++ show (snd (reachableRange line output)) ++ "\n") $-} snd (reachableRange line output) /= defaultMap && (output /= "A" || {-(trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore))-}  {-(trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore))-} line `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
---     let firstOccur = head occurs
---         (name, rr_) = reachableRange firstOccur output
---         rr = intersectAll rr_ defaultMap in {-(trace $ "selected " ++ show firstOccur ++ "\n\n\n") $-} unifyReachableRanges [rr, dfsReachableRange lines ignore name]
+dfsReachableRanges :: [String] -> [String] -> String -> [Map.Map Char [Range Int]]
+dfsReachableRanges _ _ "in" = []
+dfsReachableRanges lines ignore output =
+    let occurs = filter (\line -> snd (reachableRange line output) /= [] && (output /= "A" || line `notElem` ignore)) lines in if length occurs == 0 then [] else
+    let firstOccur = head occurs
+        (name, rr_) = reachableRange firstOccur output
+         in {-(trace $ "selected " ++ show firstOccur ++ "\n\n\n") $-} map (\rr -> unifyReachableRanges (intersectAll rr defaultMap : dfsReachableRanges lines ignore name)) rr_
 
 rangeSizeR :: Range Int -> Int
 rangeSizeR (SpanRange lower upper) = boundValue upper - boundValue lower - (if boundType lower == Exclusive then 1 else 0) - (if boundType upper == Exclusive then 1 else 0) + 1
@@ -283,11 +283,11 @@ part2' lines =
     let [workflows,ratingsStr] = splitOn [""] lines
         acceptedWorkflows = filter (\workflow -> 'A' `elem` workflow) workflows -- haha
         exclusionList = map (`take` acceptedWorkflows) [0..length acceptedWorkflows-1]
-        acceptancePaths = {-map (\toExclude -> dfsReachableRange workflows toExclude "A") exclusionList-}[] in do
+        acceptancePaths = map (\toExclude -> dfsReachableRanges workflows toExclude "A") exclusionList in do
         print exclusionList
-        -- print acceptancePaths
-        print (map numReachable acceptancePaths)
-        print (sum (map numReachable acceptancePaths))
+        print acceptancePaths
+        print (concatMap (\paths -> map numReachable paths) acceptancePaths)
+        print (sum (concatMap (\paths -> map numReachable paths) acceptancePaths))
 
 part2 = do
     lines <- getLines "day19/input.txt"
