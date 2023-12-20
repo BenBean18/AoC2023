@@ -41,7 +41,7 @@ data CircuitState = CircuitState { pulses :: [Pulse], states :: Map.Map String M
 
 processState :: CircuitState -> Int -> Int -> (CircuitState, Int, Int)
 processState CircuitState { pulses = [], states = stateMap, destMap = dMap } nHigh nLow = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, nHigh, nLow)
-processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } nHigh nLow = (trace $show pulse)$
+processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } nHigh nLow = {-(trace $show pulse)$-}
     let dest = destination pulse
         (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
         newStates = Map.insert dest newDestState stateMap in
@@ -83,10 +83,12 @@ parseLines lines = foldl (parseLine lines) emptyState lines
 part1' lines =
     let initialState_ = parseLines lines
         initialPulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState_ Map.! "broadcaster"]
-        initialState = initialState_ { pulses = initialPulses, destMap = Map.insert "output" [] (destMap initialState_), states = Map.insert "output" (FlipFlopState False) (states initialState_) }
+        initialState = initialState_ { pulses = initialPulses, destMap = Map.insert "rx" [] (destMap initialState_), states = Map.insert "rx" (FlipFlopState False) (states initialState_) }
         -- 1 since we start with an initial low pulse from the button
-        finalState = foldl (\(s, h, l) i -> (trace $ show h ++ " " ++ show l) $ processState (s { pulses = initialPulses }) h (l+1)) (initialState, 0, 0) (replicate 1000 0)
-        {-finalState = processState initialState 0 0-} in print finalState
+        (finalState, finalHigh, finalLow) = foldl (\(s, h, l) i -> {-(trace $ show h ++ " " ++ show l) $ -}processState (s { pulses = initialPulses }) h (l+1)) (initialState, 0, 0) (replicate 1000 0)
+        {-finalState = processState initialState 0 0-} in do
+            print finalState
+            print (finalHigh * finalLow)
 
 part1 = do
     lines <- getLines "day20/input.txt"
