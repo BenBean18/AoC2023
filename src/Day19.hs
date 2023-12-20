@@ -259,6 +259,8 @@ rangeSize rs = sum $ map rangeSizeR rs
 
 -- 116580868945417 too low
 
+-- 124693661917133 maybe?
+
 --- and this test case fails :(
 -- xd{s>382:R,x>3636:A,s>248:A,A}
 
