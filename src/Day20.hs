@@ -34,13 +34,13 @@ data Pulse = Pulse { source :: String, destination :: String, isHigh :: Bool } d
 data ModuleState = FlipFlopState Bool | ConjunctionState (Map.Map String Bool) deriving (Eq, Show, Ord)
 data CircuitState = CircuitState { pulses :: [Pulse], states :: Map.Map String ModuleState, destMap :: Map.Map String [String] } deriving (Eq, Show, Ord)
 
-processState :: CircuitState -> CircuitState
-processState CircuitState { pulses = [], states = stateMap, destMap = dMap } = CircuitState { pulses = [], states = stateMap, destMap = dMap }
-processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } =
+processState :: CircuitState -> Int -> (CircuitState, Int)
+processState CircuitState { pulses = [], states = stateMap, destMap = dMap } n = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, n)
+processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } n = (trace $ show n) (
     let dest = destination pulse
         (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
         newStates = Map.insert dest newDestState stateMap in
-            processState CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }
+            processState CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap } (n+1))
 
 processPulse :: Pulse -> ModuleState -> Map.Map String [String] -> (ModuleState, [Pulse])
 processPulse Pulse { source = src, destination = dest, isHigh = high } (FlipFlopState current) dMap =
@@ -71,7 +71,8 @@ parseLines = foldl parseLine emptyState
 
 -- Part 1
 part1' lines =
-    let initialState = parseLines lines in print initialState
+    let initialState = parseLines lines
+        finalState = processState CircuitState { pulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState Map.! "broadcaster"], states = states initialState, destMap = destMap initialState } 0 in print finalState
 
 part1 = do
     lines <- getLines "day20/input.txt"
