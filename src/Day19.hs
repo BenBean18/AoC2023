@@ -158,25 +158,55 @@ reachableRange workflow output =
         origConditions = splitOn "," content
         defaultOutput = last origConditions
         conditionStrs = init origConditions
-        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in {-(trace $ show conditions)-} (name, fillMap $ reachableRange' conditions output emptyMap False)
+        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in {-(trace $ show conditions)-} (name, fillMap $ reachableRange' conditions output defaultMap2 False)
 
 defaultMap :: Map.Map Char [Range Int]
 defaultMap = Map.fromList [('x', [1 +=+ 4000]),('m', [1 +=+ 4000]),('a', [1 +=+ 4000]),('s', [1 +=+ 4000])]
 
+defaultMap2 :: Map.Map Char ([Range Int], [Range Int])
+defaultMap2 = Map.fromList [('x', ([],[])),('m', ([],[])),('a', ([],[])),('s', ([],[]))]
+
 emptyMap :: Map.Map Char [Range Int]
 emptyMap = Map.fromList [('x', []),('m', []),('a', []),('s', [])]
 
-reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char [Range Int] -> Bool -> Map.Map Char [Range Int]
+invertAll :: Map.Map Char [Range Int] -> Map.Map Char [Range Int]
+invertAll = Map.map invert
+
+intersectAll :: Map.Map Char [Range Int] -> Map.Map Char [Range Int] -> Map.Map Char [Range Int]
+intersectAll m1 m2 =
+    let firstElems = Map.elems m1
+        secondElems = Map.elems m2 in Map.fromList (zip (Map.keys m1) (zipWith intersection firstElems secondElems))
+
+fillSet :: [Range Int] -> [Range Int]
+fillSet s = if s == [] then [1 +=+ 4000] else s
+
+intersectWithInverted :: Map.Map Char ([Range Int],[Range Int]) -> Bool -> Map.Map Char [Range Int]
+intersectWithInverted m isDefaultWanted =
+    let firstElems = map fst $ Map.elems m
+        secondElems = map snd $ Map.elems m in Map.fromList (zip (Map.keys m) (zipWith (\a b -> if a /= [] && b == [] && isDefaultWanted then [1 +=+ 4000] else intersection (fillSet a) (invert b)) firstElems secondElems))
+
+reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char ([Range Int], [Range Int]) -> Bool -> Map.Map Char [Range Int]
 -- go through conditions left to right
 -- if rangeForCondition of the string leads to not the output then add notCondition (that range) to the list
 -- if rangeForCondition of the string leads to the output then stop there
 -- note: here there will be only one x, m, a, s
-reachableRange' [] _ m found = if found then m else defaultMap
+-- ... try having a list of yes and no conditions?
+reachableRange' [] _ m found = if found then intersectWithInverted m False else defaultMap
 reachableRange' (condition:conditions) name currentMap found =
     let ((p, r), out) = condition in
-        if out == name then if r /= [1 +=+ 4000] then reachableRange' conditions name (Map.insert p (union (currentMap Map.! p) r) currentMap) True else currentMap
-        else if not found then reachableRange' conditions name (Map.insert p ((currentMap Map.! p) `union` notCondition r) currentMap) found
-        else currentMap
+        if out == name then
+            if r /= [1 +=+ 4000] then
+                let reachableSet = (union (fst (currentMap Map.! p)) r)
+                    unreachableSet = (snd (currentMap Map.! p)) in
+                reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) True
+            else 
+                -- default value. fill with everything not marked as reachable.
+                {-(trace $ show currentMap)-} intersectWithInverted currentMap True
+        else if not found then
+            let reachableSet = (fst (currentMap Map.! p))
+                unreachableSet = (union (snd (currentMap Map.! p)) r) in
+            reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) found
+        else {-(trace $ show currentMap)-} intersectWithInverted currentMap False
 
 fillMap :: Map.Map Char [Range Int] -> Map.Map Char [Range Int]
 fillMap m =
