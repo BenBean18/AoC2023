@@ -299,6 +299,19 @@ Correct is:
 167409079868000
 -}
 
+{-
+welllllllll crap
+this is wrong
+ghci> r = reachableRange "ghx{m>3617:A,s<2307:A,m<3433:R,hp}" "A"
+ghci> r
+("ghx",fromList [('a',[1 +=+ 4000]),('m',[3617 *=+ 4000]),('s',[1 +=* 2307]),('x',[1 +=+ 4000])])
+
+this should instead be the union of:
+- [('a',[1 +=+ 4000]),('m',[3617 *=+ 4000]),('s',[1 +=+ 4000]),('x',[1 +=+ 4000])]
+- [('a',[1 +=+ 4000]),('m',[1 +=+ 4000]),('s',[1 +=* 2307]),('x',[1 +=+ 4000])]
+
+-}
+
 time lines =
     withArgs ["--output", "day19.html"] $ defaultMain [
         bench "part1" $ nfIO $ part1' lines
