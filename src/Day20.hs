@@ -50,8 +50,28 @@ processPulse Pulse { source = src, destination = dest, isHigh = high } (Conjunct
     let newState = Map.insert src high current in
      (ConjunctionState newState, [Pulse { source = dest, destination = d, isHigh = all not (Map.elems newState) } | d <- dMap Map.! dest])
 
+-- &gk -> vq, vv, br, zt, dj, xg
+parseDestinations :: String -> [String]
+parseDestinations s = 
+    let splot = splitOn " -> " s in splitOn ", " (splot !! 1)
+
+parseLine :: CircuitState -> String -> CircuitState -- foldl compatible
+parseLine CircuitState { pulses = [], states = stateMap, destMap = dMap } line =
+    let (modType:rest) = line
+        name = head (splitOn " -> " rest) in
+        if modType == 'b' then CircuitState { pulses = [], states = stateMap, destMap = Map.insert "broadcaster" (parseDestinations line) dMap }
+        else if modType == '&' then CircuitState { pulses = [], states = Map.insert name (ConjunctionState Map.empty) stateMap, destMap = Map.insert name (parseDestinations line) dMap }
+        else CircuitState { pulses = [], states = Map.insert name (FlipFlopState False) stateMap, destMap = Map.insert name (parseDestinations line) dMap }
+
+emptyState :: CircuitState
+emptyState = CircuitState { pulses = [], states = Map.empty, destMap = Map.empty }
+
+parseLines :: [String] -> CircuitState
+parseLines = foldl parseLine emptyState
+
 -- Part 1
-part1' lines = print "Hi"
+part1' lines =
+    let initialState = parseLines lines in print initialState
 
 part1 = do
     lines <- getLines "day20/input.txt"
