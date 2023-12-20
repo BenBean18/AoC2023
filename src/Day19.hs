@@ -183,7 +183,7 @@ fillSet s = if s == [] then [1 +=+ 4000] else s
 intersectWithInverted :: Map.Map Char ([Range Int],[Range Int]) -> Bool -> Map.Map Char [Range Int]
 intersectWithInverted m isDefaultWanted =
     let firstElems = map fst $ Map.elems m
-        secondElems = map snd $ Map.elems m in Map.fromList (zip (Map.keys m) (zipWith (\a b -> if a /= [] && b == [] && isDefaultWanted then [1 +=+ 4000] else intersection (fillSet a) (invert b)) firstElems secondElems))
+        secondElems = map snd $ Map.elems m in Map.fromList (zip (Map.keys m) (zipWith (\a b -> if a /= [] && b == [] && isDefaultWanted then [1 +=+ 4001] else intersection (fillSet a) (invert b)) firstElems secondElems))
 
 reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char ([Range Int], [Range Int]) -> Bool -> Map.Map Char [Range Int]
 -- go through conditions left to right
@@ -214,7 +214,7 @@ fillMap m =
         ms = if m Map.! 'm' == [] then [1 +=+ 4000] else m Map.! 'm'
         as = if m Map.! 'a' == [] then [1 +=+ 4000] else m Map.! 'a'
         ss = if m Map.! 's' == [] then [1 +=+ 4000] else m Map.! 's' in Map.fromList [('x',xs),('m',ms),('a',as),('s',ss)]
-    
+
 
 {-
 ghci> reachableRange "px{a<2006:qkq,m>2090:A,rfg}" "A"
@@ -244,7 +244,8 @@ dfsReachableRange _ _ "in" = defaultMap
 dfsReachableRange lines ignore output =
     let occurs = filter (\line -> {-(trace $ show output ++ " " ++ show ignore ++ " " ++ show (snd (reachableRange line output)) ++ "\n") $-} snd (reachableRange line output) /= defaultMap && (output /= "A" || {-(trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore))-} line `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
     let firstOccur = head occurs
-        (name, rr) = reachableRange firstOccur output in unifyReachableRanges [rr, dfsReachableRange lines ignore name]
+        (name, rr_) = reachableRange firstOccur output
+        rr = intersectAll rr_ defaultMap in {-(trace $ "selected " ++ show firstOccur ++ "\n\n\n") $-} unifyReachableRanges [rr, dfsReachableRange lines ignore name]
 
 rangeSize :: [Range Int] -> Int
 rangeSize [SpanRange lower upper] = boundValue upper - boundValue lower - (if boundType lower == Exclusive then 1 else 0) - (if boundType upper == Exclusive then 1 else 0) + 1
