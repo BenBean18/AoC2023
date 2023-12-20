@@ -164,7 +164,7 @@ defaultMap :: Map.Map Char [Range Int]
 defaultMap = Map.fromList [('x', [1 +=+ 4000]),('m', [1 +=+ 4000]),('a', [1 +=+ 4000]),('s', [1 +=+ 4000])]
 
 defaultMap2 :: Map.Map Char ([Range Int], [Range Int])
-defaultMap2 = Map.fromList [('x', ([],[])),('m', ([],[])),('a', ([],[])),('s', ([],[]))]
+defaultMap2 = Map.fromList [('x', ([1 +=+ 4000],[])),('m', ([1 +=+ 4000],[])),('a', ([1 +=+ 4000],[])),('s', ([1 +=+ 4000],[]))]
 
 emptyMap :: Map.Map Char [Range Int]
 emptyMap = Map.fromList [('x', []),('m', []),('a', []),('s', [])]
@@ -183,7 +183,7 @@ fillSet s = if s == [] then [1 +=+ 4000] else s
 intersectWithInverted :: Map.Map Char ([Range Int],[Range Int]) -> Bool -> Map.Map Char [Range Int]
 intersectWithInverted m isDefaultWanted =
     let firstElems = map fst $ Map.elems m
-        secondElems = map snd $ Map.elems m in Map.fromList (zip (Map.keys m) (zipWith (\a b -> if a /= [] && b == [] && isDefaultWanted then [1 +=+ 4001] else intersection (fillSet a) (invert b)) firstElems secondElems))
+        secondElems = map snd $ Map.elems m in Map.fromList (zip (Map.keys m) (zipWith (\a b -> (trace $ "\n" ++ show a ++ " " ++ show b ++ "\n") $ if a /= [] && b == [] && isDefaultWanted then [1 +=+ 4001] else intersection (fillSet a) (invert b)) firstElems secondElems))
 
 reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char ([Range Int], [Range Int]) -> Bool -> Map.Map Char [Range Int]
 -- go through conditions left to right
@@ -196,14 +196,14 @@ reachableRange' (condition:conditions) name currentMap found =
     let ((p, r), out) = condition in
         if out == name then
             if r /= [1 +=+ 4000] then
-                let reachableSet = (union (fst (currentMap Map.! p)) r)
+                let reachableSet = (intersection (fst (currentMap Map.! p)) r)
                     unreachableSet = (snd (currentMap Map.! p)) in
                 reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) True
             else 
                 -- default value. fill with everything not marked as reachable.
                 {-(trace $ show currentMap)-} intersectWithInverted currentMap True
         else if not found then
-            let reachableSet = (fst (currentMap Map.! p))
+            let reachableSet = union (fst (currentMap Map.! p)) (invert r)
                 unreachableSet = (union (snd (currentMap Map.! p)) r) in
             reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) found
         else {-(trace $ show currentMap)-} intersectWithInverted currentMap False
@@ -254,6 +254,9 @@ rangeSize :: [Range Int] -> Int
 rangeSize rs = sum $ map rangeSizeR rs
 
 -- 102838812800896 too low
+
+--- and this test case fails :(
+-- xd{s>382:R,x>3636:A,s>248:A,A}
 
 numReachable :: Map.Map Char [Range Int] -> Int
 numReachable m =
