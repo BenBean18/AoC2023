@@ -330,7 +330,7 @@ reachableRange' (condition:conditions) name possible impossible =
     let ((p, r), out) = condition in
         if out == name then
             let reachableSet = intersection (possible Map.! p) r
-                unreachableSet = union (impossible Map.! p) (invert r)
+                unreachableSet = union (impossible Map.! p) r -- can't reach this again, it's been "eaten"
                 conditionMap = Map.insert p r defaultMap in
                     intersectAll conditionMap (invertAll impossible)
              : reachableRange' conditions name (Map.insert p reachableSet possible) (Map.insert p unreachableSet impossible)
