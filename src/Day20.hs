@@ -41,18 +41,18 @@ data CircuitState = CircuitState { pulses :: [Pulse], states :: Map.Map String M
 
 processState :: CircuitState -> Int -> Int -> (CircuitState, Int, Int)
 processState CircuitState { pulses = [], states = stateMap, destMap = dMap } nHigh nLow = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, nHigh, nLow)
-processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } nHigh nLow = (trace $ show pulse ++ " " ++ show otherPulses) (
+processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } nHigh nLow =
     let dest = destination pulse
         (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
         newStates = Map.insert dest newDestState stateMap in
-            processState CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap } (nHigh + if isHigh pulse then 1 else 0) (nLow + if isHigh pulse then 0 else 1))
+            processState CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap } (nHigh + if isHigh pulse then 1 else 0) (nLow + if isHigh pulse then 0 else 1)
 
 processPulse :: Pulse -> ModuleState -> Map.Map String [String] -> (ModuleState, [Pulse])
 processPulse Pulse { source = src, destination = dest, isHigh = high } (FlipFlopState current) dMap =
     if high then (FlipFlopState current, []) else (FlipFlopState (not current), [Pulse { source = dest, destination = d, isHigh = not current } | d <- dMap Map.! dest])
 processPulse Pulse { source = src, destination = dest, isHigh = high } (ConjunctionState current) dMap =
     let newState = Map.insert src high current in
-     (ConjunctionState newState, [Pulse { source = dest, destination = d, isHigh = all not (Map.elems newState) } | d <- dMap Map.! dest])
+     (ConjunctionState newState, [Pulse { source = dest, destination = d, isHigh = not (and (Map.elems newState)) } | d <- dMap Map.! dest])
 
 -- &gk -> vq, vv, br, zt, dj, xg
 parseDestinations :: String -> [String]
@@ -75,8 +75,12 @@ parseLines = foldl parseLine emptyState
 
 -- Part 1
 part1' lines =
-    let initialState = parseLines lines
-        finalState = processState CircuitState { pulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState Map.! "broadcaster"], states = states initialState, destMap = destMap initialState } 0 0 in print finalState
+    let initialState_ = parseLines lines
+        initialPulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState_ Map.! "broadcaster"]
+        initialState = initialState_ { pulses = initialPulses, destMap = Map.insert "output" [] (destMap initialState_), states = Map.insert "output" (FlipFlopState False) (states initialState_) }
+        -- 1 since we start with an initial low pulse from the button
+        finalState = foldl (\(s, h, l) i -> processState (s { pulses = initialPulses }) h (l+1)) (initialState, 0, 0) (replicate 1000 0)
+        {-finalState = processState initialState 0 0-} in print finalState
 
 part1 = do
     lines <- getLines "day20/input.txt"
