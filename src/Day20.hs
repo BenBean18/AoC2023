@@ -95,7 +95,29 @@ part1 = do
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+processStateEarlyExit :: CircuitState -> Int -> Int -> (CircuitState, Int, Int, Bool)
+processStateEarlyExit CircuitState { pulses = [], states = stateMap, destMap = dMap } nHigh nLow  = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, nHigh, nLow, False)
+processStateEarlyExit CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } nHigh nLow = {-(trace $show pulse)$-}
+    let dest = destination pulse
+        (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
+        newStates = Map.insert dest newDestState stateMap in
+            if destination pulse == "rx" && not (isHigh pulse) then (CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }, (nHigh + if isHigh pulse then 1 else 0), (nLow + if isHigh pulse then 0 else 1), True)
+            else processStateEarlyExit CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap } (nHigh + if isHigh pulse then 1 else 0) (nLow + if isHigh pulse then 0 else 1)
+
+checkRX :: [String] -> [Pulse] -> (CircuitState,Int,Int) -> Int -> Int
+checkRX lines initialPulses (s,h,l) i =
+    let (newState,newH,newL,exit) = processStateEarlyExit (s { pulses = initialPulses }) h (l+1) in
+        if exit then i+1
+        else checkRX lines initialPulses (newState,newH,newL) (i+1)
+
+part2' lines =
+    let initialState_ = parseLines lines
+        initialPulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState_ Map.! "broadcaster"]
+        initialState = initialState_ { pulses = initialPulses, destMap = Map.insert "rx" [] (destMap initialState_), states = Map.insert "rx" (FlipFlopState False) (states initialState_) }
+        -- 1 since we start with an initial low pulse from the button
+        r = checkRX lines initialPulses (initialState,0,0) 0
+        {-finalState = processState initialState 0 0-} in do
+            print r
 
 part2 = do
     lines <- getLines "day20/input.txt"
