@@ -206,7 +206,7 @@ reachableRange' (condition:conditions) name currentMap found =
             let reachableSet = intersection (fst (currentMap Map.! p)) (invert r)
                 unreachableSet = (union (snd (currentMap Map.! p)) r) in
             reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) found
-        else {-(trace $ show currentMap)-} intersectWithInverted currentMap (snd (last conditions) == name)
+        else {-(trace $ show currentMap)-} intersectWithInverted currentMap (if length conditions > 0 then snd (last conditions) == name else out == name)
 
 fillMap :: Map.Map Char [Range Int] -> Map.Map Char [Range Int]
 fillMap m =
