@@ -286,9 +286,9 @@ part2' lines =
         acceptedWorkflows = filter (\workflow -> 'A' `elem` workflow) workflows -- haha
         exclusionList = map (`take` acceptedWorkflows) [0..length acceptedWorkflows-1]
         acceptancePaths = map (\toExclude -> dfsReachableRanges workflows toExclude "A") exclusionList in do
-        print exclusionList
-        print acceptancePaths
-        print (concatMap (\paths -> map numReachable paths) acceptancePaths)
+        -- print exclusionList
+        -- print acceptancePaths
+        -- print (concatMap (\paths -> map numReachable paths) acceptancePaths)
         print (sum (concatMap (\paths -> map numReachable paths) acceptancePaths))
 
 part2 = do
