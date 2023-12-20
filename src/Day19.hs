@@ -257,6 +257,8 @@ rangeSize rs = sum $ map rangeSizeR rs
 -- 102199649395509 also lower :cry:
 -- 100777448034213 is even less UGH
 
+-- 116580868945417 too low
+
 --- and this test case fails :(
 -- xd{s>382:R,x>3636:A,s>248:A,A}
 
