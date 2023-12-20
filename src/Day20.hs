@@ -3,7 +3,7 @@ module Day20 where
 import Utilities
 import Data.List.Split
 import Data.List
-import Data.Text (pack, unpack, replace, isInfixOf)
+-- import Data.Text (pack, unpack, replace, isInfixOf)
 import Text.Regex.Base
 import Text.Regex.PCRE
 import Data.Array ((!))
@@ -41,7 +41,7 @@ data CircuitState = CircuitState { pulses :: [Pulse], states :: Map.Map String M
 
 processState :: CircuitState -> Int -> Int -> (CircuitState, Int, Int)
 processState CircuitState { pulses = [], states = stateMap, destMap = dMap } nHigh nLow = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, nHigh, nLow)
-processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } nHigh nLow =
+processState CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } nHigh nLow = (trace $show pulse)$
     let dest = destination pulse
         (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
         newStates = Map.insert dest newDestState stateMap in
@@ -54,24 +54,30 @@ processPulse Pulse { source = src, destination = dest, isHigh = high } (Conjunct
     let newState = Map.insert src high current in
      (ConjunctionState newState, [Pulse { source = dest, destination = d, isHigh = not (and (Map.elems newState)) } | d <- dMap Map.! dest])
 
+-- conjunction needs to be initialized with all LOW
+-- since right now if you just have one high it goes to low
+
+sourcesFor :: [String] -> String -> [String]
+sourcesFor lines name = map (tail . head . splitOn " -> ") (filter ((" " ++ name) `isInfixOf`) lines)
+
 -- &gk -> vq, vv, br, zt, dj, xg
 parseDestinations :: String -> [String]
-parseDestinations s = 
+parseDestinations s =
     let splot = splitOn " -> " s in splitOn ", " (splot !! 1)
 
-parseLine :: CircuitState -> String -> CircuitState -- foldl compatible
-parseLine CircuitState { pulses = [], states = stateMap, destMap = dMap } line =
+parseLine :: [String] -> CircuitState -> String -> CircuitState -- foldl compatible
+parseLine lines CircuitState { pulses = [], states = stateMap, destMap = dMap } line =
     let (modType:rest) = line
         name = head (splitOn " -> " rest) in
         if modType == 'b' then CircuitState { pulses = [], states = stateMap, destMap = Map.insert "broadcaster" (parseDestinations line) dMap }
-        else if modType == '&' then CircuitState { pulses = [], states = Map.insert name (ConjunctionState Map.empty) stateMap, destMap = Map.insert name (parseDestinations line) dMap }
+        else if modType == '&' then CircuitState { pulses = [], states = Map.insert name (ConjunctionState (Map.fromList (map (\s -> (s, False)) (sourcesFor lines name)))) stateMap, destMap = Map.insert name (parseDestinations line) dMap }
         else CircuitState { pulses = [], states = Map.insert name (FlipFlopState False) stateMap, destMap = Map.insert name (parseDestinations line) dMap }
 
 emptyState :: CircuitState
 emptyState = CircuitState { pulses = [], states = Map.empty, destMap = Map.empty }
 
 parseLines :: [String] -> CircuitState
-parseLines = foldl parseLine emptyState
+parseLines lines = foldl (parseLine lines) emptyState lines
 
 -- Part 1
 part1' lines =
@@ -79,7 +85,7 @@ part1' lines =
         initialPulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState_ Map.! "broadcaster"]
         initialState = initialState_ { pulses = initialPulses, destMap = Map.insert "output" [] (destMap initialState_), states = Map.insert "output" (FlipFlopState False) (states initialState_) }
         -- 1 since we start with an initial low pulse from the button
-        finalState = foldl (\(s, h, l) i -> processState (s { pulses = initialPulses }) h (l+1)) (initialState, 0, 0) (replicate 1000 0)
+        finalState = foldl (\(s, h, l) i -> (trace $ show h ++ " " ++ show l) $ processState (s { pulses = initialPulses }) h (l+1)) (initialState, 0, 0) (replicate 1000 0)
         {-finalState = processState initialState 0 0-} in print finalState
 
 part1 = do
