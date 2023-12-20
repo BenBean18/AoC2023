@@ -185,27 +185,27 @@ intersectWithInverted m isDefaultWanted = {-(trace $ show isDefaultWanted ++ "\n
     let firstElems = map fst $ Map.elems m
         secondElems = map snd $ Map.elems m in Map.fromList (zip (Map.keys m) (zipWith (\a b -> {-(trace $ "\n" ++ show a ++ " " ++ show b ++ "\n") $-} if isDefaultWanted then ([0 +=+ 4001] `intersection` (invert b)) else intersection (fillSet a) (invert b)) firstElems secondElems))
 
-reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char ([Range Int], [Range Int]) -> Bool -> Map.Map Char [Range Int]
+reachableRangeOld' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char ([Range Int], [Range Int]) -> Bool -> Map.Map Char [Range Int]
 -- go through conditions left to right
 -- if rangeForCondition of the string leads to not the output then add notCondition (that range) to the list
 -- if rangeForCondition of the string leads to the output then stop there
 -- note: here there will be only one x, m, a, s
 -- ... try having a list of yes and no conditions?
-reachableRange' [] _ m found = if found then intersectWithInverted m False else defaultMap
-reachableRange' (condition:conditions) name currentMap found =
+reachableRangeOld' [] _ m found = if found then intersectWithInverted m False else defaultMap
+reachableRangeOld' (condition:conditions) name currentMap found =
     let ((p, r), out) = condition in
         if out == name then
             if r /= [1 +=+ 4000] then
                 let reachableSet = (intersection (fst (currentMap Map.! p)) r)
                     unreachableSet = (snd (currentMap Map.! p)) in
-                reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) True
+                reachableRangeOld' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) True
             else 
                 -- default value. fill with everything not marked as reachable.
                 {-(trace $ show currentMap)-} intersectWithInverted currentMap True
         else if not found then
             let reachableSet = intersection (fst (currentMap Map.! p)) (invert r)
                 unreachableSet = (union (snd (currentMap Map.! p)) r) in
-            reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) found
+            reachableRangeOld' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) found
         else {-(trace $ show currentMap)-} intersectWithInverted currentMap (if length conditions > 0 then snd (last conditions) == name else out == name)
 
 fillMap :: Map.Map Char [Range Int] -> Map.Map Char [Range Int]
@@ -309,8 +309,37 @@ ghci> r
 this should instead be the union of:
 - [('a',[1 +=+ 4000]),('m',[3617 *=+ 4000]),('s',[1 +=+ 4000]),('x',[1 +=+ 4000])]
 - [('a',[1 +=+ 4000]),('m',[1 +=+ 4000]),('s',[1 +=* 2307]),('x',[1 +=+ 4000])]
+- and whatever the condition on hp is
+
+so basically the strategy is to find all the possible ways you can reach 'A' for each condition
+which is the condition's intersection with inverted impossible
 
 -}
+
+{-
+let's prove it's actually wrong
+ab{x>10:A,s>50:A,R} should yield
+x = [10 *=+ 4000] UNION x = [1 =+= 10], s = [50 *=+ 4000]
+.............and ("ab",fromList [('a',[1 +=+ 4000]),('m',[1 +=+ 4000]),('s',[50 *=+ 4000]),('x',[10 *=+ 4000])])
+-}
+
+reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char ([Range Int], [Range Int]) -> Bool -> [Map.Map Char [Range Int]]
+-- reachableRange' [] _ m found = if found then intersectWithInverted m False else defaultMap
+reachableRange' (condition:conditions) name currentMap found =
+    let ((p, r), out) = condition in
+        if out == name then
+            if r /= [1 +=+ 4000] then
+                let reachableSet = (intersection (fst (currentMap Map.! p)) r)
+                    unreachableSet = (snd (currentMap Map.! p)) in
+                reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) True
+            else 
+                -- default value. fill with everything not marked as reachable.
+                {-(trace $ show currentMap)-} intersectWithInverted currentMap True
+        else if not found then
+            let reachableSet = intersection (fst (currentMap Map.! p)) (invert r)
+                unreachableSet = (union (snd (currentMap Map.! p)) r) in
+            reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) found
+        else {-(trace $ show currentMap)-} intersectWithInverted currentMap (if length conditions > 0 then snd (last conditions) == name else out == name)
 
 time lines =
     withArgs ["--output", "day19.html"] $ defaultMain [
