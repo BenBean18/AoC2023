@@ -151,14 +151,14 @@ rangeForCondition s =
 notCondition :: [Range Int] -> [Range Int]
 notCondition r = intersection (invert r) [1 +=+ 4000]
 
-reachableRange :: String -> String -> (String, Map.Map Char [Range Int])
+reachableRange :: String -> String -> (String, [Map.Map Char [Range Int]])
 reachableRange workflow output =
     let name = head (splitOn "{" workflow)
         content = init (last (splitOn "{" workflow))
         origConditions = splitOn "," content
         defaultOutput = last origConditions
         conditionStrs = init origConditions
-        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in {-(trace $ show conditions)-} (name, fillMap $ reachableRange' conditions output defaultMap2 False)
+        conditions = map rangeForCondition conditionStrs ++ [(('x', [1 +=+ 4000]), defaultOutput)] in {-(trace $ show conditions)-} (name, (map fillMap) (reachableRange' conditions output defaultMap emptyMap))
 
 defaultMap :: Map.Map Char [Range Int]
 defaultMap = Map.fromList [('x', [1 +=+ 4000]),('m', [1 +=+ 4000]),('a', [1 +=+ 4000]),('s', [1 +=+ 4000])]
@@ -199,7 +199,7 @@ reachableRangeOld' (condition:conditions) name currentMap found =
                 let reachableSet = (intersection (fst (currentMap Map.! p)) r)
                     unreachableSet = (snd (currentMap Map.! p)) in
                 reachableRangeOld' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) True
-            else 
+            else
                 -- default value. fill with everything not marked as reachable.
                 {-(trace $ show currentMap)-} intersectWithInverted currentMap True
         else if not found then
@@ -239,13 +239,13 @@ unifyReachableRanges maps = if Map.empty `elem` maps then Map.empty else
         as = map (Map.! 'a') maps
         ss = map (Map.! 's') maps in Map.fromList [('x', foldl intersection [1 +=+ 4000] xs), ('m', foldl intersection [1 +=+ 4000] ms), ('a', foldl intersection [1 +=+ 4000] as), ('s', foldl intersection [1 +=+ 4000] ss)]
 
-dfsReachableRange :: [String] -> [String] -> String -> Map.Map Char [Range Int]
-dfsReachableRange _ _ "in" = defaultMap
-dfsReachableRange lines ignore output =
-    let occurs = filter (\line -> {-(trace $ show output ++ " " ++ show ignore ++ " " ++ show (snd (reachableRange line output)) ++ "\n") $-} snd (reachableRange line output) /= defaultMap && (output /= "A" || {-(trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore))-} line `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
-    let firstOccur = head occurs
-        (name, rr_) = reachableRange firstOccur output
-        rr = intersectAll rr_ defaultMap in {-(trace $ "selected " ++ show firstOccur ++ "\n\n\n") $-} unifyReachableRanges [rr, dfsReachableRange lines ignore name]
+-- dfsReachableRange :: [String] -> [String] -> String -> Map.Map Char [Range Int]
+-- dfsReachableRange _ _ "in" = defaultMap
+-- dfsReachableRange lines ignore output =
+--     let occurs = filter (\line -> {-(trace $ show output ++ " " ++ show ignore ++ " " ++ show (snd (reachableRange line output)) ++ "\n") $-} snd (reachableRange line output) /= defaultMap && (output /= "A" || {-(trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore))-}  {-(trace $ (if line `elem` ignore then "\nignoring " ++ show line ++ " for " ++ show output ++ " " ++ show line else show line ++ " " ++ show ignore))-} line `notElem` ignore)) lines in if length occurs == 0 then Map.empty else
+--     let firstOccur = head occurs
+--         (name, rr_) = reachableRange firstOccur output
+--         rr = intersectAll rr_ defaultMap in {-(trace $ "selected " ++ show firstOccur ++ "\n\n\n") $-} unifyReachableRanges [rr, dfsReachableRange lines ignore name]
 
 rangeSizeR :: Range Int -> Int
 rangeSizeR (SpanRange lower upper) = boundValue upper - boundValue lower - (if boundType lower == Exclusive then 1 else 0) - (if boundType upper == Exclusive then 1 else 0) + 1
@@ -283,9 +283,9 @@ part2' lines =
     let [workflows,ratingsStr] = splitOn [""] lines
         acceptedWorkflows = filter (\workflow -> 'A' `elem` workflow) workflows -- haha
         exclusionList = map (`take` acceptedWorkflows) [0..length acceptedWorkflows-1]
-        acceptancePaths = map (\toExclude -> dfsReachableRange workflows toExclude "A") exclusionList in do
+        acceptancePaths = {-map (\toExclude -> dfsReachableRange workflows toExclude "A") exclusionList-}[] in do
         print exclusionList
-        print acceptancePaths
+        -- print acceptancePaths
         print (map numReachable acceptancePaths)
         print (sum (map numReachable acceptancePaths))
 
@@ -323,23 +323,21 @@ x = [10 *=+ 4000] UNION x = [1 =+= 10], s = [50 *=+ 4000]
 .............and ("ab",fromList [('a',[1 +=+ 4000]),('m',[1 +=+ 4000]),('s',[50 *=+ 4000]),('x',[10 *=+ 4000])])
 -}
 
-reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char ([Range Int], [Range Int]) -> Bool -> [Map.Map Char [Range Int]]
+reachableRange' :: [((Char, [Range Int]), String)] -> String -> Map.Map Char [Range Int] -> Map.Map Char [Range Int] -> [Map.Map Char [Range Int]]
 -- reachableRange' [] _ m found = if found then intersectWithInverted m False else defaultMap
-reachableRange' (condition:conditions) name currentMap found =
+reachableRange' [] _ _ _ = []
+reachableRange' (condition:conditions) name possible impossible =
     let ((p, r), out) = condition in
         if out == name then
-            if r /= [1 +=+ 4000] then
-                let reachableSet = (intersection (fst (currentMap Map.! p)) r)
-                    unreachableSet = (snd (currentMap Map.! p)) in
-                reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) True
-            else 
-                -- default value. fill with everything not marked as reachable.
-                {-(trace $ show currentMap)-} intersectWithInverted currentMap True
-        else if not found then
-            let reachableSet = intersection (fst (currentMap Map.! p)) (invert r)
-                unreachableSet = (union (snd (currentMap Map.! p)) r) in
-            reachableRange' conditions name (Map.insert p (reachableSet, unreachableSet) currentMap) found
-        else {-(trace $ show currentMap)-} intersectWithInverted currentMap (if length conditions > 0 then snd (last conditions) == name else out == name)
+            let reachableSet = intersection (possible Map.! p) r
+                unreachableSet = union (impossible Map.! p) (invert r)
+                conditionMap = Map.insert p r defaultMap in
+                    intersectAll conditionMap (invertAll impossible)
+             : reachableRange' conditions name (Map.insert p reachableSet possible) (Map.insert p unreachableSet impossible)
+        else
+            let reachableSet = intersection (possible Map.! p) (invert r)
+                unreachableSet = union (impossible Map.! p) r in
+            reachableRange' conditions name (Map.insert p reachableSet possible) (Map.insert p unreachableSet impossible)
 
 time lines =
     withArgs ["--output", "day19.html"] $ defaultMain [
