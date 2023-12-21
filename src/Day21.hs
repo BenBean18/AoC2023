@@ -17,6 +17,8 @@ import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
 
+import qualified Day21_part2
+
 type Coord = (Int, Int)
 data Color = Color String | Nothing deriving (Eq, Ord, Show)
 
@@ -67,21 +69,8 @@ part1 = do
     lines <- getLines "day21/input.txt"
     part1' lines
 
--- Part 2
--- ... ok so 26501365 must be significant in some way
--- probably, it just seems so random
--- prime factorization according to wolfram alpha: 5×11×481843
--- with the infinite grid, we can just do modulo on the indices to check if a value is in bounds
--- maybe this is core to how you do it?
-
-modCoord :: Coord -> Coord -> Coord
-modCoord (x,y) (mx,my) = (x `mod` mx, y `mod` my)
-
-part2' lines = print "Hi"
-
-part2 = do
-    lines <- getLines "day21/input.txt"
-    part2' lines
+part2' = Day21_part2.part2'
+part2 = Day21_part2.part2
 
 time lines =
     withArgs ["--output", "day21.html"] $ defaultMain [
