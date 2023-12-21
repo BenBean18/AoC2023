@@ -17,6 +17,9 @@ import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
 
+import Data.IORef
+import GHC.IO.Unsafe (unsafePerformIO)
+
 {-
 Flip-flop modules (prefix %) are either on or off; they are initially off. If a flip-flop module receives a high pulse, it is ignored and nothing happens. However, if a flip-flop module receives a low pulse, it flips between on and off. If it was off, it turns on and sends a high pulse. If it was on, it turns off and sends a low pulse.
 
@@ -99,13 +102,13 @@ processStateEarlyExit :: CircuitState -> (CircuitState, Bool)
 processStateEarlyExit CircuitState { pulses = [], states = stateMap, destMap = dMap }  = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, False)
 processStateEarlyExit CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } = {-(trace $show pulse)$-}
     let dest = destination pulse
-        (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
+        (newDestState, newPulses) = memoizedProcessPulse pulse (stateMap Map.! dest) dMap
         newStates = Map.insert dest newDestState stateMap in
             if destination pulse == "rx" && not (isHigh pulse) then (CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }, True)
             else processStateEarlyExit CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }
 
 checkRX :: [String] -> [Pulse] -> CircuitState -> Int -> Int
-checkRX lines initialPulses s i = (trace $ show i) (
+checkRX lines initialPulses s i = {-(trace $ show i)-} (
     let (newState,exit) = processStateEarlyExit (s { pulses = initialPulses }) in
         if exit then i+1
         else checkRX lines initialPulses newState (i+1))
@@ -124,6 +127,20 @@ LCM or something?
 
 Dynamic programming could be great here, so we can try memoizing
 -}
+
+{-# NOINLINE memo #-}
+memo :: IORef (Map.Map (Pulse, ModuleState) (ModuleState, [Pulse]))
+memo = unsafePerformIO (newIORef mempty)
+
+memoizedProcessPulse :: Pulse -> ModuleState -> Map.Map String [String] -> (ModuleState, [Pulse])
+memoizedProcessPulse p ms m = {-(trace $ show p ++ " " ++ show ms) $ -}unsafePerformIO $ do
+    memoMap <- readIORef memo
+    let current = Map.lookup (p,ms) memoMap
+    if isNothing current then (trace "unmemoized") $ do
+        let output = processPulse p ms m
+        writeIORef memo (Map.insert (p,ms) output memoMap)
+        return output
+    else (trace "memoized") return (fromJust current)
 
 part2' lines =
     let initialState_ = parseLines lines

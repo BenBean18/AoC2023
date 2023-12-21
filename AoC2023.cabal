@@ -27,7 +27,7 @@ executable AoC2023
     ghc-options: -optc-O3
 
     -- Modules included in this executable, other than Main.
-    other-modules: Utilities, Day1, Day2, Day3, Day4, Day5, Day5_part2, Day6, Day7, Day7_part2, Day8, Day9, Day9_old, Day10, Day10_part2, Day11, Day12, Day13, Day14, Day15, Day16, Day17, Day18, Day19, Day20
+    other-modules: Utilities, Day1, Day2, Day3, Day4, Day5, Day5_part2, Day6, Day7, Day7_part2, Day8, Day9, Day9_old, Day10, Day10_part2, Day11, Day12, Day13, Day14, Day15, Day16, Day17, Day18, Day19, Day20, Day21
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
