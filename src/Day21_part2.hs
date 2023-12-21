@@ -1,4 +1,4 @@
-module Day21 where
+module Day21_part2 where
 
 import Utilities
 import Data.List.Split
