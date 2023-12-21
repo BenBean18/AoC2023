@@ -16,6 +16,8 @@ import Data.Maybe
 import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
+import Data.IORef
+import GHC.IO.Unsafe
 
 type Coord = (Int, Int)
 data Color = Color String | Nothing deriving (Eq, Ord, Show)
@@ -41,12 +43,43 @@ charAt charList (x,y) = charList !! y !! x
 inBounds :: [String] -> Coord -> Bool
 inBounds charList (xc,yc) = not (xc < 0 || yc < 0 || xc >= length (head charList) || yc >= length charList)
 
+{-# NOINLINE memo #-}
+memo :: IORef (Map.Map Coord Bool)
+memo = unsafePerformIO (newIORef mempty)
+
 canGo :: [String] -> Coord -> Bool
-canGo chars c = charAt chars (c `modCoord` (length (head chars), length chars)) /= '#'
+canGo lines c_ = unsafePerformIO $ do
+    let c = c_ `modCoord` (length (head lines), length lines)
+    memoMap <- readIORef memo
+    let current = Map.lookup c memoMap
+    if isNothing current then do
+        let val = canGo' lines c
+        let newMap = Map.insert c val memoMap
+        writeIORef memo newMap
+        return val
+    else return (fromJust current)
+
+canGo' :: [String] -> Coord -> Bool
+canGo' chars c = charAt chars c /= '#'
+
+{-# NOINLINE neighMemo #-}
+neighMemo :: IORef (Map.Map Coord [Coord])
+neighMemo = unsafePerformIO (newIORef mempty)
 
 neighboringCoords :: [String] -> Coord -> [Coord]
-neighboringCoords chars c =
-    let allDirs = map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)] in filter (canGo chars) allDirs
+neighboringCoords lines c = unsafePerformIO $ do
+    memoMap <- readIORef neighMemo
+    let current = Map.lookup c memoMap
+    if isNothing current then do
+        let val = neighboringCoords' lines c
+        let newMap = Map.insert c val memoMap
+        writeIORef neighMemo newMap
+        return val
+    else return (fromJust current)
+
+neighboringCoords' :: [String] -> Coord -> [Coord]
+neighboringCoords' chars c =
+    let allDirs = filter (inBounds chars) (map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)]) in filter (canGo chars) allDirs
 
 findStart :: [String] -> Int -> Coord
 findStart lines y =
@@ -66,9 +99,11 @@ findNumReachable lines currentCoords stepsLeft =
 -- with the infinite grid, we can just do modulo on the indices to check if a value is in bounds
 -- maybe this is core to how you do it?
 
+-- can we instead of a Set do a Map.Map Coord Int (to store the # of occurrences)?
+
 part2' lines =
     let startCoord = findStart lines 0
-        reachable = findNumReachable lines (Set.singleton startCoord) 100 in do
+        reachable = findNumReachable lines (Set.singleton startCoord) 26501365 in do
         -- print reachable
         print $ Set.size reachable
 
