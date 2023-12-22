@@ -79,22 +79,18 @@ neighboringCoords lines c = unsafePerformIO $ do
 
 neighboringCoords' :: [String] -> Coord -> [Coord]
 neighboringCoords' chars c =
-    let allDirs = {-filter (inBounds chars) -}(map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)]) in map (\c_ -> c_ `modCoord` (length (head chars), length chars)) $ filter (canGo chars) allDirs
+    let allDirs = {-filter (inBounds chars) -}(map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)]) in filter (canGo chars) allDirs
 
 findStart :: [String] -> Int -> Coord
 findStart lines y =
     let thisLine = lines !! y in if 'S' `elem` thisLine then (head ('S' `elemIndices` thisLine), y) else findStart lines (y+1)
 
-updateCoord :: Map.Map Coord Int -> Map.Map Coord Int -> Coord -> [Coord] -> Map.Map Coord Int
-updateCoord origMap currentMap c coords =
-    let numTiles = origMap Map.! c in foldl (\m thisCoord -> Map.insertWith (+) thisCoord numTiles m) currentMap coords
-
 -- note: (probably relevant for part 2) you don't need to find the actual tiles reached, just the # of tiles reached
-findNumReachable :: [String] -> Map.Map Coord Int -> Int -> Map.Map Coord Int
+findNumReachable :: [String] -> Set.Set Coord -> Int -> Set.Set Coord
 findNumReachable lines currentCoords 0 = currentCoords
 findNumReachable lines currentCoords stepsLeft =
-    let newMap = foldl (\m (c,coords) -> updateCoord currentCoords m c coords) Map.empty (map (\c -> (c, neighboringCoords lines c)) (Map.keys currentCoords))
-    in findNumReachable lines newMap (stepsLeft - 1)
+    let currentList = Set.toList currentCoords
+        newList = concatMap (neighboringCoords lines) currentList in findNumReachable lines (Set.fromList newList) (stepsLeft - 1)
 
 -- Part 2
 -- ... ok so 26501365 must be significant in some way
@@ -111,8 +107,10 @@ findNumReachable lines currentCoords stepsLeft =
 part2' :: [String] -> IO ()
 part2' lines =
     let startCoord = findStart lines 0
-        reached = findNumReachable lines (Map.fromList [(startCoord,1)]) 100 in do
-        print reached
+        ir = map (\i -> (i, findNumReachable lines (Set.singleton startCoord) i)) [0..1000] in do
+        -- print reachable
+        print (head ir)
+        mapM_ (\(i,r) -> putStrLn $ show i ++ "," ++ show (Set.size r)) ir
 
 part2 = do
     lines <- getLines "day21/input.txt"
