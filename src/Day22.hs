@@ -16,6 +16,8 @@ import Data.Maybe
 import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
+import Data.IORef
+import GHC.IO.Unsafe
 
 -- Part 1
 -- Strategy: sort bricks by their Z coordinate
@@ -92,13 +94,30 @@ part1 = do
 -- Then call this function on each unvisited brick not supported by anything, adding 1 to the current bricked count
 -- Recursively check this until total # of bricks supported is found
 
-bricksThatWillFall :: Map.Map Int (Set.Set Int) -> Set.Set Int -> [Int] -> Int -> Int
-bricksThatWillFall supportingMap visited brickIndices fallen =
+bricksThatWillFall' :: Map.Map Int (Set.Set Int) -> Set.Set Int -> [Int] -> Int
+bricksThatWillFall' supportingMap visited brickIndices =
     let newMap = Map.map (Set.filter (`notElem` brickIndices)) supportingMap
         vulnerableBricks = Map.filter Set.null newMap
         unvisitedVulnerableBricks = filter (`Set.notMember` visited) (Map.keys vulnerableBricks) in {-(trace $ show brickIndices ++ " " ++ show supportingMap ++ " " ++ show newMap ++ "\n\n\n") $ -}
-            if null unvisitedVulnerableBricks then fallen else
-            bricksThatWillFall newMap (foldl (flip Set.insert) visited unvisitedVulnerableBricks) unvisitedVulnerableBricks (fallen + length unvisitedVulnerableBricks)
+            if null unvisitedVulnerableBricks then 0 else
+            bricksThatWillFall newMap (foldl (flip Set.insert) visited unvisitedVulnerableBricks) unvisitedVulnerableBricks + length unvisitedVulnerableBricks
+
+-- {-# NOINLINE memo #-}
+-- memo :: IORef (Map.Map [Int] Int)
+-- memo = unsafePerformIO (newIORef mempty)
+
+-- bricksThatWillFall :: Map.Map Int (Set.Set Int) -> Set.Set Int -> [Int] -> Int
+-- bricksThatWillFall m visited bricks = unsafePerformIO $ do
+--     memoMap <- readIORef memo
+--     let current = Map.lookup bricks memoMap
+--     if isNothing current then do
+--         let val = bricksThatWillFall' m visited bricks
+--         let newMap = Map.insert (bricks) val memoMap
+--         writeIORef memo newMap
+--         return val
+--     else (trace "memoized") return (fromJust current)
+
+bricksThatWillFall = bricksThatWillFall'
 
 -- bricks MUST be sorted lowest to highest Z
 findSupportMap :: [Brick] -> (Grid, Map.Map Int (Set.Set Int))
@@ -114,7 +133,7 @@ part2' lines =
         sortedBricks = sortBricks bricks
         (fallenState, supportingMap_) = findSupportMap sortedBricks
         supportingMap = Map.map (\s -> if Set.null s then Set.singleton (-1) else s) supportingMap_ -- artificially say that the base brick is supported
-        toppledBricks = map (\brick -> bricksThatWillFall supportingMap (Set.singleton (i brick)) [(i brick)] 0) sortedBricks
+        toppledBricks = map (\brick -> bricksThatWillFall supportingMap (Set.singleton (i brick)) [(i brick)]) sortedBricks
         totalToppledBricks = sum toppledBricks in do
     print totalToppledBricks
 
