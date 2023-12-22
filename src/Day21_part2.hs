@@ -19,6 +19,17 @@ import Data.List.Unique (allUnique)
 import Data.IORef
 import GHC.IO.Unsafe
 
+import Numeric.LinearAlgebra
+    ( Numeric,
+      Matrix,
+      Field,
+      pinv,
+      (#>),
+      fromColumns,
+      toColumns,
+      toList,
+      fromList )
+
 type Coord = (Int, Int)
 data Color = Color String | Nothing deriving (Eq, Ord, Show)
 
@@ -104,13 +115,39 @@ findNumReachable lines currentCoords stepsLeft =
 -- could try Set.Set (Coord, Coord) where the first coordinate is the position in the map and the second coordinate is the position OF the map (on the infinite grid)
 -- but then we are still storing the same number of things
 
+-- will be degree [length of the vector] - 1 since that works
+designMatrix :: (Numeric t) => [t] -> Matrix t
+designMatrix xValues =
+    let columns = map (\exp -> map (^ exp) xValues) [0..10] in
+        fromColumns (map fromList columns)
+
+-- Y = Xb
+-- or... X_pseudoinverse * Y = b
+-- parameters: x, y, best fit parameters
+linearRegression :: (Numeric t, Field t, Show t) => [t] -> [t] -> (t -> t)
+linearRegression x y =
+    let mX = designMatrix x
+        vY = fromList y
+        mX_pseudoinverse = pinv mX
+        vBeta = mX_pseudoinverse #> vY
+        beta = toList vBeta in (trace $ show (toColumns mX)) (applyPolynomial beta)
+
+applyPolynomial :: (Numeric t, Show t) => [t] -> t -> t
+applyPolynomial beta x = sum (map (\i -> {-(trace $ show (beta !! i) ++ " " ++ show i ++ " " ++ show x ++ " " ++ show ((beta !! i) * (x ^ i)))-} ((beta !! i) * (x ^ i))) [0..length beta-1])
+
+findReachableList :: [String] -> [(Int, Set.Set Coord)] -> Int -> [(Int, Set.Set Coord)]
+findReachableList lines currentSets 0 = currentSets
+findReachableList lines currentSets nLeft =
+    let (lastI, lastEvaluated) = head currentSets
+        newSets = (lastI + 1, findNumReachable lines lastEvaluated 1) : currentSets in findReachableList lines newSets (nLeft-1)
+
 part2' :: [String] -> IO ()
 part2' lines =
     let startCoord = findStart lines 0
-        ir = map (\i -> (i, findNumReachable lines (Set.singleton startCoord) i)) [0..1000] in do
+        ir = foldl (\sets _ -> (trace $ show (length sets - 1) ++ "," ++ show (Set.size (head sets))) (findNumReachable lines (head sets) 1) : sets) [Set.singleton startCoord] [0..1000] in do
         -- print reachable
         print (head ir)
-        mapM_ (\(i,r) -> putStrLn $ show i ++ "," ++ show (Set.size r)) ir
+        mapM_ (\(i,r) -> putStrLn $ show i ++ "," ++ show (Set.size r)) (zip [0..1000] ir)
 
 part2 = do
     lines <- getLines "day21/input.txt"
