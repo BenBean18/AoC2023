@@ -27,7 +27,7 @@ data Brick = Brick { x :: (Int, Int), y :: (Int, Int), z :: (Int, Int), i :: Int
 type Grid = Map.Map (Int,Int,Int) Int -- :( the int is for which brick the spot is claimed by
 
 parseBrick :: [String] -> Int -> Brick
-parseBrick strs index = 
+parseBrick strs index =
     let s = strs !! index
         [start,end] = splitOn "~" s
         [x1,y1,z1] = map (\num -> read num :: Int) (splitOn "," start)
@@ -41,32 +41,34 @@ sortBricks = sortBy (\brick1 brick2 -> compare (fst (z brick1)) (fst (z brick2))
 
 spacesUnder :: Brick -> Grid -> Grid
 spacesUnder Brick { x = (x1,x2), y = (y1,y2), z = (z1,z2), i = index } =
-    Map.filter (\(x,y,z) -> x1 <= x && x <= x2 && y1 <= y && y <= y2 && z1 <= z && z <= z2)
+    Map.filterWithKey (\(x,y,z) _ -> x1 <= x && x <= x2 && y1 <= y && y <= y2)
 
 -- Returns (z, [brick IDs])
 highestBricks :: Grid -> (Int, [Int])
 highestBricks grid =
-    let highestZ = maximum (1 : (map (\(x,y,z) -> z) (Map.keys grid)))
-        highestBrickIDs = Map.elems (Map.filter (\(x,y,z) -> z == highestZ) grid) in (highestZ, highestBrickIDs)
+    let highestZ = maximum (0 : (map (\(x,y,z) -> z) (Map.keys grid)))
+        highestBrickIDs = Map.elems (Map.filterWithKey (\(x,y,z) _ -> z == highestZ) grid) in (highestZ, highestBrickIDs)
 
 insertBrick :: Grid -> Brick -> Int -> Grid
 insertBrick grid Brick { x = (x1,x2), y = (y1,y2), z = (z1,z2), i = index } insertionZ =
     let allX = [x1..x2]
         allY = [y1..y2]
         allZ = [0+insertionZ..(z2-z1)+insertionZ]
-        allCoords = map (\x -> map (\y -> map (\z -> (x,y,z)) allZ) allY) allX -- yay 3D "for loop" in
-    foldl (\m coord -> Map.insert coord index m) grid allCoords
+        allCoords = concatMap (\x -> concatMap (\y -> map (\z -> (x,y,z)) allZ) allY) allX in -- yay 3D "for loop"
+    {-(trace $ "Inserting brick " ++ show index ++ " at z=" ++ show insertionZ ++ ", coords=" ++ show allCoords ++ " new map =" ++ show (foldl (\m coord -> Map.insert coord index m) grid allCoords))-} foldl (\m coord -> Map.insert coord index m) grid allCoords
 
 -- returns (new grid, [supporting brick IDs])
-insertFallingBrick :: Grid -> Brick -> (Grid, [Int])
+insertFallingBrick :: Grid -> Brick -> (Grid, Set.Set Int)
 insertFallingBrick grid brick =
-    let (highestZ, ids) = highestBricks (spacesUnder brick grid) in (insertBrick grid brick (highestZ + 1), ids)
+    let (highestZ, ids) = highestBricks (spacesUnder brick grid) in (trace $ "Brick " ++ show (i brick) ++ " is supported by " ++ show ids) (insertBrick grid brick (highestZ + 1), Set.fromList ids)
 
 -- bricks MUST be sorted lowest to highest Z
 makeBricksFall :: [Brick] -> (Grid, Set.Set Int)
-makeBricksFall bricks = foldl (\(grid, supporting) brick -> (fst (insertFallingBrick grid brick), Set.union supporting (Set.fromList (snd (insertFallingBrick grid brick))))) (Map.empty, Set.empty) bricks
+makeBricksFall = foldl (\(grid, supporting) brick ->
+        let (newGrid, supportingIDs) = insertFallingBrick grid brick in
+            (newGrid, Set.union supporting (if Set.size supportingIDs == 1 then supportingIDs else Set.empty))) (Map.empty, Set.empty)
 
-part1' lines = 
+part1' lines =
     let bricks = parseBricks lines
         sortedBricks = sortBricks bricks
         (fallenState, supportingBricks) = makeBricksFall sortedBricks
