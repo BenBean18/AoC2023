@@ -60,7 +60,7 @@ insertBrick grid Brick { x = (x1,x2), y = (y1,y2), z = (z1,z2), i = index } inse
 -- returns (new grid, [supporting brick IDs])
 insertFallingBrick :: Grid -> Brick -> (Grid, Set.Set Int)
 insertFallingBrick grid brick =
-    let (highestZ, ids) = highestBricks (spacesUnder brick grid) in (trace $ "Brick " ++ show (i brick) ++ " is supported by " ++ show ids) (insertBrick grid brick (highestZ + 1), Set.fromList ids)
+    let (highestZ, ids) = highestBricks (spacesUnder brick grid) in {-(trace $ "Brick " ++ show (i brick) ++ " is supported by " ++ show ids)-} (insertBrick grid brick (highestZ + 1), Set.fromList ids)
 
 -- bricks MUST be sorted lowest to highest Z
 makeBricksFall :: [Brick] -> (Grid, Set.Set Int)
@@ -84,7 +84,39 @@ part1 = do
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+
+-- For each brick, find the bricks it is supported by. (already done)
+
+-- Recursive function: starting with each load-bearing brick, look at what bricks it is supporting
+-- Remove all instances of the bricks supported by the current brick from the values of the supporting map
+-- Then call this function on each unvisited brick not supported by anything, adding 1 to the current bricked count
+-- Recursively check this until total # of bricks supported is found
+
+bricksThatWillFall :: Map.Map Int (Set.Set Int) -> Set.Set Int -> [Int] -> Int -> Int
+bricksThatWillFall supportingMap visited brickIndices fallen =
+    let newMap = Map.map (Set.filter (`notElem` brickIndices)) supportingMap
+        vulnerableBricks = Map.filter Set.null newMap
+        unvisitedVulnerableBricks = filter (`Set.notMember` visited) (Map.keys vulnerableBricks) in {-(trace $ show brickIndices ++ " " ++ show supportingMap ++ " " ++ show newMap ++ "\n\n\n") $ -}
+            if null unvisitedVulnerableBricks then fallen else
+            bricksThatWillFall newMap (foldl (flip Set.insert) visited unvisitedVulnerableBricks) unvisitedVulnerableBricks (fallen + length unvisitedVulnerableBricks)
+
+-- bricks MUST be sorted lowest to highest Z
+findSupportMap :: [Brick] -> (Grid, Map.Map Int (Set.Set Int))
+findSupportMap = foldl (\(grid, supportingMap) brick ->
+        let (newGrid, supportingIDs) = insertFallingBrick grid brick in
+            (newGrid, Map.insert (i brick) supportingIDs supportingMap)) (Map.empty, Map.empty)
+
+-- 104600 too high
+-- (because 900 is actually a brick index which I was using for a placeholder...)
+
+part2' lines =
+    let bricks = parseBricks lines
+        sortedBricks = sortBricks bricks
+        (fallenState, supportingMap_) = findSupportMap sortedBricks
+        supportingMap = Map.map (\s -> if Set.null s then Set.singleton (-1) else s) supportingMap_ -- artificially say that the base brick is supported
+        toppledBricks = map (\brick -> bricksThatWillFall supportingMap (Set.singleton (i brick)) [(i brick)] 0) sortedBricks
+        totalToppledBricks = sum toppledBricks in do
+    print totalToppledBricks
 
 part2 = do
     lines <- getLines "day22/input.txt"
