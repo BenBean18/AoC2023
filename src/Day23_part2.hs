@@ -1,4 +1,4 @@
-module Day23 where
+module Day23_part2 where
 
 import Utilities
 import Data.List.Split
@@ -16,14 +16,16 @@ import Data.Maybe
 import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
-import qualified Day23_part2 (part2, part2')
 
--- Part 1
+-- Part 2
 
--- We have to find the longest path with no repeated vertices (never step onto the same tile twice) -- interesting
--- Also, you have to go in the direction of a slope tile once you land on it
--- First, create a graph from the map
--- Then we can traverse it
+-- Same as part 1, except slope tiles are just regular tiles
+-- hmmm... from Wikipedia: "However, [the longest path problem] has a linear time solution for directed acyclic graphs, which has important applications in finding the critical path in scheduling problems. "
+
+{-
+THIS MAKES SO MUCH SENSE
+A longest path between two given vertices s and t in a weighted graph G is the same thing as a shortest path in a graph −G derived from G by changing every weight to its negation. Therefore, if shortest paths can be found in −G, then longest paths can also be found in G.
+-}
 
 type Coord = (Int, Int)
 type Path = [Coord]
@@ -34,13 +36,6 @@ add (x1,y1) (x2,y2) = (x1+x2, y1+y2)
 -- This will be represented using adjacency lists
 type Graph = Map.Map Coord [Coord]
 
-directionOf :: Char -> Coord
-directionOf '>' = (1,0)
-directionOf '<' = (-1,0)
-directionOf 'v' = (0,1)
-directionOf '^' = (0,-1)
-directionOf _ = (0,0)
-
 charAt :: [[Char]] -> Coord -> Char
 charAt charList (x,y) = charList !! y !! x
 
@@ -48,9 +43,7 @@ inBounds :: [[Char]] -> Coord -> Bool
 inBounds charList (xc,yc) = not (xc < 0 || yc < 0 || xc >= length (head charList) || yc >= length charList)
 
 canGo :: [[Char]] -> Coord -> Coord -> Bool
-canGo chars start end =
-    let dir = directionOf (charAt chars start) in
-        charAt chars start /= '#' && charAt chars end /= '#' && (if dir == (0,0) then True else end == start `add` dir)
+canGo chars start end = charAt chars start /= '#' && charAt chars end /= '#'
 
 neighboringCoords :: [[Char]] -> Coord -> [Coord]
 neighboringCoords chars c =
@@ -74,7 +67,7 @@ dfs graph currentPath destination =
             (if (last currentPath) == destination then [currentPath] else []) ++
             concatMap (\p -> dfs graph p destination) neighborPaths
 
-part1' lines =
+part2' lines =
     let graph = parseGraph lines
         start = (fromJust $ '.' `elemIndex` head lines, 0)
         end = (fromJust $ '.' `elemIndex` last lines, length lines - 1)
@@ -83,21 +76,6 @@ part1' lines =
         maxSteps = maximum steps in
         print maxSteps
 
-part1 = do
+part2 = do
     lines <- getLines "day23/input.txt"
-    part1' lines
-
--- Part 2
-part2' = Day23_part2.part2'
-
-part2 = Day23_part2.part2
-
-time lines =
-    withArgs ["--output", "day23.html"] $ defaultMain [
-        bench "part1" $ nfIO $ part1' lines
-      , bench "part2" $ nfIO $ part2' lines
-    ]
-
-benchmark = do
-    lines <- getLines "day23/input.txt"
-    time lines
+    part2' lines
