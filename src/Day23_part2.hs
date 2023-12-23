@@ -132,12 +132,17 @@ spfa graph costMap candidates endingCoord = if Set.null candidates then fst $ co
 
 -- so something with comparison was messed up, fst (currentMap Map.! key) > fst value /= currentMap Map.! key > value
 -- wait this is because the path *matters* when choosing which path to go to next (if we have already visited somewhere that makes a difference)
+-- do we have to try every possible path
+-- again, maybe try a graph of paths
+-- CHECK THE CRUCIBLE PROBLEM for an example of something similar!
 -- have to try comething different
 -- anyway, it returns 5250 with new comparison so let's try that -- assuming it will be incorrect
 
 {-
 That's not the right answer. If you're stuck, make sure you're using the full input data; there are also some general tips on the about page, or you can ask for hints on the subreddit. Because you have guessed incorrectly 4 times on this puzzle, please wait 5 minutes before trying again. [Return to Day 23]
 -}
+
+-- To verify if I have a correct algorithm: confirm start -> end == end -> start on sample data
 
 part2' lines =
     let graph = parseGraph lines
