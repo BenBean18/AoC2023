@@ -58,6 +58,7 @@ parseGraph chars =
 -- so apparently on a directed acyclic graph if you do a topological sort (every vertex comes before the vertices depending on it): https://en.wikipedia.org/wiki/Topological_sorting#Depth-first_search,
 -- shortest path is O(n+m)
 -- is our graph acyclic? no... :(
+-- and it's not directed either!
 
 -- but Dijkstra's with negative weights will still be better than a DFS over the entire graph
 -- summary:
@@ -102,24 +103,51 @@ bellmanFord graph costMap endingCoord i =
                 )
                 (filter (`Set.notMember` path) (graph Map.! coord))
                                                                     ) (Map.toList costMap)
-        newCostMap = foldl (\currentMap (key, value) -> if currentMap Map.! key > value then Map.insert key value currentMap else currentMap) costMap neighbors in bellmanFord graph newCostMap endingCoord (i-1)
+        newCostMap = foldl (\currentMap (key, value) -> if fst (currentMap Map.! key) > fst value then Map.insert key value currentMap else currentMap) costMap neighbors in bellmanFord graph newCostMap endingCoord (i-1)
 
 spfa :: Graph -> Map.Map Coord (Int, Set.Set Coord) -> Set.Set Coord -> Coord -> Int
 spfa graph costMap candidates endingCoord = if Set.null candidates then fst $ costMap Map.! endingCoord else
     -- relax all edges from all vertices
     let neighbors = concatMap (\coord -> map (\c -> (c, ((fst (costMap Map.! coord)) - 1, Set.insert c (snd (costMap Map.! coord))))) (filter (`Set.notMember` (snd (costMap Map.! coord))) (graph Map.! coord))) candidates
-        newCostMap = foldl (\currentMap (key, value) -> if currentMap Map.! key > value then Map.insert key value currentMap else currentMap) costMap neighbors in (trace $ show $ length candidates) spfa graph newCostMap (Set.fromList (map fst neighbors)) endingCoord
+        newCostMap = foldl (\currentMap (key, value) -> if fst (currentMap Map.! key) > fst value then Map.insert key value currentMap else currentMap) costMap neighbors in (trace $ show $ length candidates) spfa graph newCostMap (Set.fromList (map fst neighbors)) endingCoord
 
 -- 4906 too low :(
 -- 4906 continues to be too low, even though both Dijkstra's and SPFA find it
 -- ...........................
 -- 4279 too low...i am silly idk why i thought this was higher
 
+-- ok new idea
+-- what if instead of having a graph of coordinates, we have a graph of paths
+-- then that's a directed acyclic graph
+-- but the search space is HUGE
+
+-- ...something's up
+-- this graph should be undirected, because there are no slopes
+-- so the path from start to end should equal the path from end to start
+-- but it doesn't
+
+-- and interestingly, using Dijkstra's, the path from end to start is 2278 long which is the part 1 answer
+
+-- THIS IS AN UNDIRECTED GRAPH!
+
+-- so something with comparison was messed up, fst (currentMap Map.! key) > fst value /= currentMap Map.! key > value
+-- wait this is because the path *matters* when choosing which path to go to next (if we have already visited somewhere that makes a difference)
+-- have to try comething different
+-- anyway, it returns 5250 with new comparison so let's try that -- assuming it will be incorrect
+
+{-
+That's not the right answer. If you're stuck, make sure you're using the full input data; there are also some general tips on the about page, or you can ask for hints on the subreddit. Because you have guessed incorrectly 4 times on this puzzle, please wait 5 minutes before trying again. [Return to Day 23]
+-}
+
 part2' lines =
     let graph = parseGraph lines
         start = (fromJust $ '.' `elemIndex` head lines, 0)
         end = (fromJust $ '.' `elemIndex` last lines, length lines - 1)
-        longestPath = spfa graph (Map.mapWithKey (\coord _ -> (0, Set.singleton coord)) graph) (Set.singleton start) end in do
+        longestPath = spfa graph (Map.mapWithKey (\coord _ -> (0, Set.singleton coord)) graph) (Set.singleton start) end
+        -- longestPath = bellmanFord graph (PSQ.singleton end (0, Set.singleton end)) Set.empty start
+        -- verify every child of every coordinate has a child that is the parent
+        undirected = and (concatMap (\coord -> (map (\c -> coord `elem` (graph Map.! c)) (graph Map.! coord))) (Map.keys graph)) in do
+        print undirected
         print longestPath
 
 part2 = do
