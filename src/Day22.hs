@@ -75,9 +75,9 @@ part1' lines =
         sortedBricks = sortBricks bricks
         (fallenState, supportingBricks) = makeBricksFall sortedBricks
         safeToDisintegrate = length bricks - (Set.size supportingBricks) in do
-    print fallenState
-    print supportingBricks
-    putStrLn "-------------------"
+    -- print fallenState
+    -- print supportingBricks
+    -- putStrLn "-------------------"
     print safeToDisintegrate
 
 
