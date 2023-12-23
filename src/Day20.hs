@@ -17,9 +17,6 @@ import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
 
-import Data.IORef
-import GHC.IO.Unsafe (unsafePerformIO)
-
 {-
 Flip-flop modules (prefix %) are either on or off; they are initially off. If a flip-flop module receives a high pulse, it is ignored and nothing happens. However, if a flip-flop module receives a low pulse, it flips between on and off. If it was off, it turns on and sends a high pulse. If it was on, it turns off and sends a low pulse.
 
@@ -90,7 +87,7 @@ part1' lines =
         -- 1 since we start with an initial low pulse from the button
         (finalState, finalHigh, finalLow) = foldl (\(s, h, l) i -> {-(trace $ show h ++ " " ++ show l) $ -}processState (s { pulses = initialPulses }) h (l+1)) (initialState, 0, 0) (replicate 1000 0)
         {-finalState = processState initialState 0 0-} in do
-            print finalState
+            -- print finalState
             print (finalHigh * finalLow)
 
 part1 = do
