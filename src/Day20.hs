@@ -98,20 +98,46 @@ part1 = do
     part1' lines
 
 -- Part 2
-processStateEarlyExit :: CircuitState -> (CircuitState, Bool)
-processStateEarlyExit CircuitState { pulses = [], states = stateMap, destMap = dMap }  = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, False)
-processStateEarlyExit CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } = {-(trace $show pulse)$-}
+processStateEarlyExit :: CircuitState -> Pulse -> (CircuitState, Bool)
+processStateEarlyExit CircuitState { pulses = [], states = stateMap, destMap = dMap } pExit = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, False)
+processStateEarlyExit CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } pExit = {-(trace $show pulse)$-}
     let dest = destination pulse
         (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
         newStates = Map.insert dest newDestState stateMap in
-            if source pulse == "vq" && destination pulse == "hp" && (isHigh pulse) then (CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }, True)
-            else processStateEarlyExit CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }
+            if pulse == pExit then (CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }, True)
+            else processStateEarlyExit CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap } pExit
 
-checkRX :: [String] -> [Pulse] -> CircuitState -> Int -> Int
-checkRX lines initialPulses s i = {-(trace $ show i)-} (
-    let (newState,exit) = processStateEarlyExit (s { pulses = initialPulses }) in
-        if exit then (i+1)
-        else checkRX lines initialPulses newState (i+1))
+-- checkRX :: [String] -> [Pulse] -> CircuitState -> Int -> Int
+-- checkRX lines initialPulses s i = {-(trace $ show i)-} (
+--     let (newState,exit) = processStateEarlyExit (s { pulses = initialPulses }) in
+--         if exit then (i+1)
+--         else checkRX lines initialPulses newState (i+1))
+
+findNodesTo :: Map.Map String [String] -> String -> [String]
+findNodesTo m s = Map.keys $ Map.filter (s `elem`) m
+
+findSecondLevelNodes :: CircuitState -> (String, [String])
+findSecondLevelNodes CircuitState { states = stateMap, destMap = m } = 
+    -- note: on inputs that don't follow this pattern, these "assertions" will effectively fail since the patterns don't match
+    let [strConnectedToRX] = findNodesTo m "rx"
+        (ConjunctionState _) = stateMap Map.! strConnectedToRX
+        (ConjunctionState _) = stateMap Map.! strConnectedToRX in
+            -- The single node connected to rx is a conjunction node, so to send a low pulse to rx, it must be sent high pulses from all connected nodes (this should be simulate-able)
+            -- SO, we find the amount of button presses required for each to send a high pulse (find the pulse twice to verify a cycle exists)
+            -- ok we should try to find the cycle twice, but once worked, not exactly sure why
+            (strConnectedToRX, findNodesTo m strConnectedToRX)
+
+findCycle :: [String] -> [Pulse] -> CircuitState -> Pulse -> Int -> Int -> (CircuitState, Int)
+findCycle lines initialPulses state desiredPulse cycleLength currentCycle =
+    let (newState,exit) = processStateEarlyExit (state { pulses = initialPulses }) desiredPulse in
+        if exit then (state, (currentCycle+1))
+        else {-(trace $ show currentCycle)-} findCycle lines initialPulses newState desiredPulse cycleLength (currentCycle+1)
+
+findCycles :: [String] -> [Pulse] -> CircuitState -> [Int]
+findCycles lines initialPulses state =
+    let (lastNode, secondLevelNodes) = findSecondLevelNodes state
+        neededPulses = map (\s -> Pulse { source = s, destination = lastNode, isHigh = True }) secondLevelNodes
+        cycles = map (\p -> snd $ findCycle lines initialPulses state p 0 0) neededPulses in cycles
 
 -- nodes linked to hp (last before rx) and number before high pulse:
 -- sn: 3967
@@ -140,9 +166,16 @@ part2' lines =
         initialPulses = [Pulse { source = "broadcaster", destination = d, isHigh = False } | d <- destMap initialState_ Map.! "broadcaster"]
         initialState = initialState_ { pulses = initialPulses, destMap = Map.insert "rx" [] (destMap initialState_), states = Map.insert "rx" (FlipFlopState False) (states initialState_) }
         -- 1 since we start with an initial low pulse from the button
-        r = checkRX lines initialPulses initialState 0
+        -- (firstState, count) = (findCycle lines initialPulses initialState (Pulse { source = "rf", destination = "hp", isHigh = True }) 0 0)
+        -- (nextState, count2) = (findCycle lines initialPulses initialState (Pulse { source = "rf", destination = "hp", isHigh = False }) 0 0 0)
+        -- (nextState, True) = processStateEarlyExit (initialState { pulses = initialPulses }) Pulse { source = "rf", destination = "hp", isHigh = True }
+        cycles = (findCycles lines initialPulses initialState)
+        leastCommonMultiple = foldl lcm (head cycles) (tail cycles)
         {-finalState = processState initialState 0 0-} in do
-            print r
+            -- putStrLn "Number of button presses to reach each second level node:"
+            -- print cycles
+            -- putStrLn "Solution (LCM of cycles):"
+            print leastCommonMultiple
 
 part2 = do
     lines <- getLines "day20/input.txt"
