@@ -88,6 +88,10 @@ The Bellman–Ford algorithm is an algorithm that computes shortest paths from a
 from what i can see, the Bellman-Ford algorithm is like Dijkstra's but instead of only checking the edges from the closest unvisited vertex, it checks all the edges
 and it does this (# of vertices) - 1 times... need to read more
 -}
+
+-- oh this is clever: https://en.wikipedia.org/wiki/Shortest_path_faster_algorithm
+-- you only want to check a vertex again if you found a better path to it in the previous iteration (no benefit to doing so otherwise)
+
 bellmanFord :: Graph -> Map.Map Coord (Int, Set.Set Coord) -> Coord -> Int -> Int
 bellmanFord graph costMap endingCoord 0 = fst $ costMap Map.! endingCoord
 bellmanFord graph costMap endingCoord i =
@@ -100,14 +104,22 @@ bellmanFord graph costMap endingCoord i =
                                                                     ) (Map.toList costMap)
         newCostMap = foldl (\currentMap (key, value) -> if currentMap Map.! key > value then Map.insert key value currentMap else currentMap) costMap neighbors in bellmanFord graph newCostMap endingCoord (i-1)
 
+spfa :: Graph -> Map.Map Coord (Int, Set.Set Coord) -> Set.Set Coord -> Coord -> Int
+spfa graph costMap candidates endingCoord = if Set.null candidates then fst $ costMap Map.! endingCoord else
+    -- relax all edges from all vertices
+    let neighbors = concatMap (\coord -> map (\c -> (c, ((fst (costMap Map.! coord)) - 1, Set.insert c (snd (costMap Map.! coord))))) (filter (`Set.notMember` (snd (costMap Map.! coord))) (graph Map.! coord))) candidates
+        newCostMap = foldl (\currentMap (key, value) -> if currentMap Map.! key > value then Map.insert key value currentMap else currentMap) costMap neighbors in (trace $ show $ length candidates) spfa graph newCostMap (Set.fromList (map fst neighbors)) endingCoord
+
 -- 4906 too low :(
+-- 4906 continues to be too low, even though both Dijkstra's and SPFA find it
+-- ...........................
 -- 4279 too low...i am silly idk why i thought this was higher
 
 part2' lines =
     let graph = parseGraph lines
         start = (fromJust $ '.' `elemIndex` head lines, 0)
         end = (fromJust $ '.' `elemIndex` last lines, length lines - 1)
-        longestPath = bellmanFord graph (Map.mapWithKey (\coord _ -> (0, Set.singleton coord)) graph) end (Map.size graph - 1) in do
+        longestPath = spfa graph (Map.mapWithKey (\coord _ -> (0, Set.singleton coord)) graph) (Set.singleton start) end in do
         print longestPath
 
 part2 = do
