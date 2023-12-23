@@ -66,13 +66,14 @@ parseGraph chars =
 -- "This hike contains 94 steps. (The other possible hikes you could have taken were 90, 86, 82, 82, and 74 steps long.)"
 
 -- does a depth-first search to find all possible paths to the end
+-- n = related to vertices, m = related to edges
 dfs :: Graph -> Path -> Coord -> [Path]
 dfs graph currentPath destination =
-    let lastCoord = last currentPath
-        neighbors = filter (`notElem` currentPath) (graph Map.! lastCoord)
-        neighborPaths = map (\c -> currentPath ++ [c]) neighbors in
+    let lastCoord = last currentPath -- O(n)
+        neighbors = filter (`notElem` currentPath) (graph Map.! lastCoord) -- O(n) repeated m times, so O(mn)
+        neighborPaths = map (\c -> currentPath ++ [c]) neighbors in -- O(n) probably
             (if (last currentPath) == destination then [currentPath] else []) ++
-            concatMap (\p -> dfs graph p destination) neighborPaths
+            concatMap (\p -> dfs graph p destination) neighborPaths -- ... so it calls itself which is exponential...this is very bad
 
 part1' lines =
     let graph = parseGraph lines

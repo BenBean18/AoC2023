@@ -16,6 +16,7 @@ import Data.Maybe
 import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
+import qualified Data.PSQueue as PSQ
 
 -- Part 2
 
@@ -54,27 +55,41 @@ parseGraph chars =
     let allCoords = concatMap (\x -> map (\y -> (x,y)) [0..length chars-1]) [0..length (head chars)-1] in
         foldl (\currentMap coord -> Map.insert coord (neighboringCoords chars coord) currentMap) Map.empty allCoords
 
--- so can we use dijkstra's algorithm with a max heap instead of a min heap?
--- but that's basically just a DFS
--- "This hike contains 94 steps. (The other possible hikes you could have taken were 90, 86, 82, 82, and 74 steps long.)"
+-- so apparently on a directed acyclic graph if you do a topological sort (every vertex comes before the vertices depending on it): https://en.wikipedia.org/wiki/Topological_sorting#Depth-first_search,
+-- shortest path is O(n+m)
+-- is our graph acyclic? no... :(
 
--- does a depth-first search to find all possible paths to the end
-dfs :: Graph -> Path -> Coord -> [Path]
-dfs graph currentPath destination =
-    let lastCoord = last currentPath
-        neighbors = filter (`notElem` currentPath) (graph Map.! lastCoord)
-        neighborPaths = map (\c -> currentPath ++ [c]) neighbors in
-            (if (last currentPath) == destination then [currentPath] else []) ++
-            concatMap (\p -> dfs graph p destination) neighborPaths
+-- but Dijkstra's with negative weights will still be better than a DFS over the entire graph
+-- summary:
+-- have a Map.Map vertex (current min cost to vertex, set of vertices used to get there) initialized to (inf, Set.empty)
+-- actually, we can represent this as a priority queue to use min-heap property
+-- while not all nodes are visited:
+-- pick a current node (lowest cost in the map, use a min heap) and store current vertex, cost, and set of vertices used to get there
+-- for all connected edges, if they have a lesser cost than the current minimum to get to the next vertex, replace in the map
+
+-- having (Int, Set.Set Coord) for comparison is fine since tuples are compared from first to last element
+dijkstra :: Graph -> PSQ.PSQ Coord (Int, Set.Set Coord) -> Set.Set Coord -> Coord -> Int
+dijkstra graph priorityQueue visited endingCoord =
+    let Just (nextBinding, newPQ) = PSQ.minView priorityQueue
+        currentCoord = PSQ.key nextBinding
+        (currentCost, currentPath) = PSQ.prio nextBinding in
+    if currentCoord == endingCoord then -currentCost
+    else if currentCoord `Set.member` visited then (trace "already visited") dijkstra graph newPQ visited endingCoord
+    else
+    let newVisited = Set.insert currentCoord visited
+        neighbors = filter (`Set.notMember` currentPath) (graph Map.! currentCoord)
+        -- note: every edge has cost -1 since we want to find the longest path (aka shortest path with negative weights)
+        neighborsToInsert = map (\n -> (n, (currentCost - 1, Set.insert n currentPath))) neighbors
+        newPQWithNeighbors = foldl (\q (key, prio) -> PSQ.insert key prio q) newPQ neighborsToInsert in dijkstra graph newPQWithNeighbors newVisited endingCoord
+
+-- 4906 too low :(
 
 part2' lines =
     let graph = parseGraph lines
         start = (fromJust $ '.' `elemIndex` head lines, 0)
         end = (fromJust $ '.' `elemIndex` last lines, length lines - 1)
-        paths = dfs graph [start] end
-        steps = map (\p -> length p - 1) paths
-        maxSteps = maximum steps in
-        print maxSteps
+        longestPath = dijkstra graph (PSQ.singleton start (0, Set.singleton start)) (Set.empty) end in
+        print longestPath
 
 part2 = do
     lines <- getLines "day23/input.txt"
