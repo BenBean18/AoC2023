@@ -52,7 +52,7 @@ neighboringCoords chars c =
 
 parseGraph :: [[Char]] -> Graph
 parseGraph chars =
-    let allCoords = concatMap (\x -> map (\y -> (x,y)) [0..length chars-1]) [0..length (head chars)-1] in
+    let allCoords = filter (\c -> charAt chars c /= '#') $ concatMap (\x -> map (\y -> (x,y)) [0..length chars-1]) [0..length (head chars)-1] in
         foldl (\currentMap coord -> Map.insert coord (neighboringCoords chars coord) currentMap) Map.empty allCoords
 
 -- so apparently on a directed acyclic graph if you do a topological sort (every vertex comes before the vertices depending on it): https://en.wikipedia.org/wiki/Topological_sorting#Depth-first_search,
@@ -81,14 +81,33 @@ dijkstra graph priorityQueue visited endingCoord =
         -- note: every edge has cost -1 since we want to find the longest path (aka shortest path with negative weights)
         neighborsToInsert = map (\n -> (n, (currentCost - 1, Set.insert n currentPath))) neighbors
         newPQWithNeighbors = foldl (\q (key, prio) -> PSQ.insert key prio q) newPQ neighborsToInsert in dijkstra graph newPQWithNeighbors newVisited endingCoord
+-- ...oops so apparently dijkstra's fails with negative weighted graphs? https://stackoverflow.com/questions/6799172/negative-weights-using-dijkstras-algorithm/6799344#6799344
+{-
+The Bellman–Ford algorithm is an algorithm that computes shortest paths from a single source vertex to all of the other vertices in a weighted digraph.[1] It is slower than Dijkstra's algorithm for the same problem, but more versatile, as it is capable of handling graphs in which some of the edge weights are negative numbers.
+
+from what i can see, the Bellman-Ford algorithm is like Dijkstra's but instead of only checking the edges from the closest unvisited vertex, it checks all the edges
+and it does this (# of vertices) - 1 times... need to read more
+-}
+bellmanFord :: Graph -> Map.Map Coord (Int, Set.Set Coord) -> Coord -> Int -> Int
+bellmanFord graph costMap endingCoord 0 = fst $ costMap Map.! endingCoord
+bellmanFord graph costMap endingCoord i =
+    -- relax all edges from all vertices
+    let neighbors = concatMap (\(coord, (cost, path)) ->
+            map (\c -> 
+                    (c, (cost - 1, Set.insert c path))
+                )
+                (filter (`Set.notMember` path) (graph Map.! coord))
+                                                                    ) (Map.toList costMap)
+        newCostMap = foldl (\currentMap (key, value) -> if currentMap Map.! key > value then Map.insert key value currentMap else currentMap) costMap neighbors in bellmanFord graph newCostMap endingCoord (i-1)
 
 -- 4906 too low :(
+-- 4279 too low...i am silly idk why i thought this was higher
 
 part2' lines =
     let graph = parseGraph lines
         start = (fromJust $ '.' `elemIndex` head lines, 0)
         end = (fromJust $ '.' `elemIndex` last lines, length lines - 1)
-        longestPath = dijkstra graph (PSQ.singleton start (0, Set.singleton start)) (Set.empty) end in
+        longestPath = bellmanFord graph (Map.mapWithKey (\coord _ -> (0, Set.singleton coord)) graph) end (Map.size graph - 1) in do
         print longestPath
 
 part2 = do
