@@ -102,16 +102,23 @@ processStateEarlyExit :: CircuitState -> (CircuitState, Bool)
 processStateEarlyExit CircuitState { pulses = [], states = stateMap, destMap = dMap }  = (CircuitState { pulses = [], states = stateMap, destMap = dMap }, False)
 processStateEarlyExit CircuitState { pulses = pulse:otherPulses, states = stateMap, destMap = dMap } = {-(trace $show pulse)$-}
     let dest = destination pulse
-        (newDestState, newPulses) = memoizedProcessPulse pulse (stateMap Map.! dest) dMap
+        (newDestState, newPulses) = processPulse pulse (stateMap Map.! dest) dMap
         newStates = Map.insert dest newDestState stateMap in
-            if destination pulse == "rx" && not (isHigh pulse) then (CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }, True)
+            if source pulse == "vq" && destination pulse == "hp" && (isHigh pulse) then (CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }, True)
             else processStateEarlyExit CircuitState { pulses = otherPulses ++ newPulses, states = newStates, destMap = dMap }
 
 checkRX :: [String] -> [Pulse] -> CircuitState -> Int -> Int
 checkRX lines initialPulses s i = {-(trace $ show i)-} (
     let (newState,exit) = processStateEarlyExit (s { pulses = initialPulses }) in
-        if exit then i+1
+        if exit then (i+1)
         else checkRX lines initialPulses newState (i+1))
+
+-- nodes linked to hp (last before rx) and number before high pulse:
+-- sn: 3967
+-- sr: 3923
+-- rf: 4021
+-- vq: 3917
+-- least common multiple (when all high pulses are sent): 245114020323037
 
 {-
 Some thinking:
@@ -127,20 +134,6 @@ LCM or something?
 
 Dynamic programming could be great here, so we can try memoizing
 -}
-
-{-# NOINLINE memo #-}
-memo :: IORef (Map.Map (Pulse, ModuleState) (ModuleState, [Pulse]))
-memo = unsafePerformIO (newIORef mempty)
-
-memoizedProcessPulse :: Pulse -> ModuleState -> Map.Map String [String] -> (ModuleState, [Pulse])
-memoizedProcessPulse p ms m = {-(trace $ show p ++ " " ++ show ms) $ -}unsafePerformIO $ do
-    memoMap <- readIORef memo
-    let current = Map.lookup (p,ms) memoMap
-    if isNothing current then (trace "unmemoized") $ do
-        let output = processPulse p ms m
-        writeIORef memo (Map.insert (p,ms) output memoMap)
-        return output
-    else (trace "memoized") return (fromJust current)
 
 part2' lines =
     let initialState_ = parseLines lines
