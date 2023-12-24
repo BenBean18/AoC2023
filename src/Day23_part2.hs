@@ -64,27 +64,29 @@ parseGraph chars =
     let allCoords = filter (\c -> charAt chars c /= '#') $ concatMap (\x -> map (\y -> (x,y)) [0..length chars-1]) [0..length (head chars)-1] in
         foldl (\currentMap coord -> Map.insert coord (neighboringCoords chars coord) currentMap) Map.empty allCoords
 
-dfs :: Graph -> Set.Set Coord -> (Path,Int) -> Coord -> Coord -> [Int]
-dfs graph visited (currentPath,currentLen) currentCoord destination = (trace $ show currentPath ++ " " ++ show currentLen) $
+dfs :: Graph -> Set.Set Coord -> Int -> Coord -> Coord -> [Int]
+dfs graph visited currentLen currentCoord destination = --(trace $ show currentLen) $
     let lastCoord = currentCoord
         neighbors = filter (\c -> c /= currentCoord && c `Set.notMember` visited) (graph Map.! lastCoord)
         newVisited = Set.insert currentCoord visited
         lowDegreeNeighbors = filter (\coord -> length (graph Map.! coord) <= 2) neighbors
-        highDegreeNeighbors = filter (\coord -> length (graph Map.! coord) > 2) neighbors -- only add degree 2+ vertices to path
-        neighborPaths = map (\c -> currentPath ++ [c]) highDegreeNeighbors in
+        highDegreeNeighbors = filter (\coord -> length (graph Map.! coord) > 2) neighbors in -- only add degree 2+ vertices to path
             (if currentCoord == destination then {-(trace "found dest path")-} [currentLen] else []) ++
-            concatMap (\n -> dfs graph newVisited (currentPath,currentLen+1) n destination) lowDegreeNeighbors ++ concatMap (\p -> dfs graph newVisited (p,currentLen+1) (last p) destination) neighborPaths
+            concatMap (\c -> dfs graph newVisited (currentLen+1) c destination) neighbors
 
 -- 4906 too low :(
 -- 4906 continues to be too low, even though both Dijkstra's and SPFA find it
 -- ...........................
 -- 4279 too low...i am silly idk why i thought this was higher
 
+-- so... the graph of paths *is* a directed acyclic graph
+-- can only go from one path to the next and can't go "back"
+
 part2' lines =
     let graph = parseGraph lines
         start = (fromJust $ '.' `elemIndex` head lines, 0)
         end = (fromJust $ '.' `elemIndex` last lines, length lines - 1)
-        paths = dfs graph Set.empty ([start],0) start end
+        paths = dfs graph Set.empty 0 start end
         steps = {-map (\p -> length p - 1) -}paths
         maxSteps = maximum steps in
         print maxSteps
