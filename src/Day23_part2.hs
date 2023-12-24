@@ -142,7 +142,7 @@ bfs' graph visited currentCoord endingCoords =
         nonEndNeighbors = filter (`notElem` endingCoords) neighbors
         endNeighbors = filter (`elem` endingCoords) neighbors
         newVisited = Set.insert currentCoord visited in
-            [(n, Set.size newVisited + 1, newVisited) | n <- endNeighbors] ++ concatMap (\n -> bfs' graph newVisited n endingCoords) nonEndNeighbors
+            [(n, Set.size newVisited, newVisited) | n <- endNeighbors] ++ concatMap (\n -> bfs' graph newVisited n endingCoords) nonEndNeighbors
 
 dijkstra' :: Graph -> PSQ.PSQ Coord (Int, Set.Set Coord) -> Set.Set Coord -> [Coord] -> (Coord, Int, Set.Set Coord)
 dijkstra' graph priorityQueue visited endingCoords =
@@ -170,7 +170,7 @@ dfs' graph visited currentLen currentCoord destination = --(trace $ show current
     let lastCoord = currentCoord
         neighbors = filter (\(c,cost,v) -> c /= currentCoord && c `Map.notMember` visited) (graph Map.! lastCoord)
         newVisited = Map.insertWith (+) currentCoord 1 visited in
-            (if currentCoord == destination{- && Map.size (Map.filter (> 2) newVisited) == 0 -}then (trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n") [currentLen] else []) ++
+            (if currentCoord == destination && Map.size (Map.filter (> 1) newVisited) == 0 then (trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n") [currentLen] else []) ++
             concatMap (\(coord,cost,v) -> dfs' graph (Map.unionWith (+) newVisited (Map.fromList (map (\c -> (c,1)) (Set.toList v)))) (currentLen+cost) coord destination) neighbors
 
 part2' lines =
@@ -192,7 +192,8 @@ part2' lines =
         -- print (Map.size g2)
         -- print (length junctions)
         -- print (map (\(c1,others) -> map (\(c2,l,v) -> (c1,(c2,l,Set.size v))) others) (Map.toList g2))
-        print paths
+        print $ Map.size g2
+        print $ maximum paths
         -- print (map (\j -> (bfs' graph Set.empty j junctions)) junctions)
         -- print g2
 
