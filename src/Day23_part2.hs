@@ -112,7 +112,7 @@ dijkstra graph priorityQueue visited endingCoord =
 -- create the graph of paths (compressing to only include start, decision points, and end ONLY if end is the ending point)
 -- this is a tree, so it's a DAG
 -- should have about 2^34 paths = ~17 billion = doable
--- also at least 850000 paths exist that reach the end
+-- also at least 925000 paths exist that reach the end (after 2 hours :/)
 
 -- also just brute forcing every single path and tracing once reaches destination
 -- solution MUST be at least 6478 (edit: actually 6582)
@@ -171,7 +171,7 @@ dfs' graph visited currentLen currentCoord destination = -- (trace $ show curren
         neighbors = filter (\(c,cost,v) -> c /= currentCoord && c `Map.notMember` visited) (graph Map.! lastCoord)
         newVisited = Map.insertWith (+) currentCoord 1 visited in
             (if currentCoord == destination && Map.size (Map.filter (> 1) newVisited) == 0 then {-(trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n")-} [currentLen] else []) ++
-            concatMap (\(coord,cost,v) -> dfs' graph (Map.unionWith (+) newVisited (Map.fromList (map (\c -> (c,1)) (Set.toList v)))) (currentLen+cost) coord destination) neighbors
+            concatMap (\(coord,cost,v) -> dfs' graph newVisited (currentLen+cost) coord destination) neighbors
 
 part2' lines =
     let graph = parseGraph lines
