@@ -54,7 +54,7 @@ inBounds charList (xc,yc) = not (xc < 0 || yc < 0 || xc >= length (head charList
 canGo :: [[Char]] -> Coord -> Coord -> Bool
 canGo chars start end =
     let dir = directionOf (charAt chars start) in
-        charAt chars start /= '#' && charAt chars end /= '#'-- && (if dir == (0,0) then True else end == start `add` dir)
+        charAt chars start /= '#' && charAt chars end /= '#' && (if dir == (0,0) then True else end == start `add` dir)
 
 neighboringCoords :: [[Char]] -> Coord -> [Coord]
 neighboringCoords chars c =
@@ -112,7 +112,7 @@ dijkstra graph priorityQueue visited endingCoord =
 -- create the graph of paths (compressing to only include start, decision points, and end ONLY if end is the ending point)
 -- this is a tree, so it's a DAG
 -- should have about 2^34 paths = ~17 billion = doable
--- also at least 530000 paths exist that reach the end
+-- also at least 850000 paths exist that reach the end
 
 -- also just brute forcing every single path and tracing once reaches destination
 -- solution MUST be at least 6478 (edit: actually 6582)
@@ -166,11 +166,11 @@ parseSparseGraph chars additionalCoords =
         newGraph = foldl (\m (c1,(c2,cost,v)) -> Map.insertWith (++) c2 [(c1,cost,(Set.delete c2 (Set.delete c1 v)))] (Map.insertWith (++) c1 [(c2,cost,(Set.delete c2 (Set.delete c1 v)))] m)) Map.empty distances in newGraph
 
 dfs' :: GraphWithCost -> Map.Map Coord Int -> Int -> Coord -> Coord -> [Int]
-dfs' graph visited currentLen currentCoord destination = --(trace $ show currentLen) $
+dfs' graph visited currentLen currentCoord destination = -- (trace $ show currentLen) $
     let lastCoord = currentCoord
         neighbors = filter (\(c,cost,v) -> c /= currentCoord && c `Map.notMember` visited) (graph Map.! lastCoord)
         newVisited = Map.insertWith (+) currentCoord 1 visited in
-            (if currentCoord == destination && Map.size (Map.filter (> 1) newVisited) == 0 then (trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n") [currentLen] else []) ++
+            (if currentCoord == destination && Map.size (Map.filter (> 1) newVisited) == 0 then {-(trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n")-} [currentLen] else []) ++
             concatMap (\(coord,cost,v) -> dfs' graph (Map.unionWith (+) newVisited (Map.fromList (map (\c -> (c,1)) (Set.toList v)))) (currentLen+cost) coord destination) neighbors
 
 part2' lines =
@@ -188,7 +188,7 @@ part2' lines =
         -- print maxStepsDijkstra
         -- print maxSteps
         -- note: junctions are [(9,15),(11,57),(15,33),(15,101),(17,77),(29,103),(31,5),(35,67),(37,37),(41,77),(41,133),(53,55),(55,109),(57,125),(59,89),(61,7),(67,43),(77,7),(77,39),(77,123),(79,63),(79,101),(83,81),(103,19),(105,85),(107,33),(107,133),(109,61),(111,107),(123,59),(123,107),(123,127),(125,81),(135,31)]
-        -- print junctions
+        print junctions
         -- print (Map.size g2)
         -- print (length junctions)
         -- print (map (\(c1,others) -> map (\(c2,l,v) -> (c1,(c2,l,Set.size v))) others) (Map.toList g2))
