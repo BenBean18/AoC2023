@@ -75,14 +75,14 @@ dfs graph currentPath destination =
             (if (last currentPath) == destination then [currentPath] else []) ++
             concatMap (\p -> dfs graph p destination) neighborPaths -- ... so it calls itself which is exponential...this is very bad
 
-part1' lines =
-    let graph = parseGraph lines
-        start = (fromJust $ '.' `elemIndex` head lines, 0)
-        end = (fromJust $ '.' `elemIndex` last lines, length lines - 1)
-        paths = dfs graph [start] end
-        steps = map (\p -> length p - 1) paths
-        maxSteps = maximum steps in
-        print maxSteps
+part1' lines = print "hi"
+    -- let graph = parseGraph lines
+    --     start = (fromJust $ '.' `elemIndex` head lines, 0)
+    --     end = (fromJust $ '.' `elemIndex` last lines, length lines - 1)
+    --     paths = dfs graph [start] end
+    --     steps = map (\p -> length p - 1) paths
+    --     maxSteps = maximum steps in
+    --     print maxSteps
 
 part1 = do
     lines <- getLines "day23/input.txt"
