@@ -17,6 +17,7 @@ import qualified Data.MultiSet as MultiSet
 
 import Data.List.Unique (allUnique)
 import qualified Data.PSQueue as PSQ
+import Data.Map (fromList)
 
 -- Part 2
 
@@ -111,7 +112,7 @@ dijkstra graph priorityQueue visited endingCoord =
 -- create the graph of paths (compressing to only include start, decision points, and end ONLY if end is the ending point)
 -- this is a tree, so it's a DAG
 -- should have about 2^34 paths = ~17 billion = doable
--- also at least 477000 paths exist that reach the end
+-- also at least 530000 paths exist that reach the end
 
 -- also just brute forcing every single path and tracing once reaches destination
 -- solution MUST be at least 6478 (edit: actually 6582)
@@ -133,34 +134,43 @@ findJunctions chars =
     let allCoords = filter (\c -> charAt chars c /= '#') $ concatMap (\x -> map (\y -> (x,y)) [0..length chars-1]) [0..length (head chars)-1]
         junctions = filter (\c -> length (neighboringCoords chars c) > 2) allCoords in junctions
 
-dijkstra' :: Graph -> PSQ.PSQ Coord (Int, Set.Set Coord) -> Set.Set Coord -> Coord -> (Int, Set.Set Coord)
-dijkstra' graph priorityQueue visited endingCoord =
+-- ok so we need a function to BFS out from one point, stopping whenever we hit a ending point
+
+bfs' :: Graph -> Set.Set Coord -> Coord -> [Coord] -> [(Coord, Int, Set.Set Coord)]
+bfs' graph visited currentCoord endingCoords =
+    let neighbors = filter (`Set.notMember` visited) (graph Map.! currentCoord)
+        nonEndNeighbors = filter (`notElem` endingCoords) neighbors
+        endNeighbors = filter (`elem` endingCoords) neighbors
+        newVisited = Set.insert currentCoord visited in
+            [(n, Set.size newVisited + 1, newVisited) | n <- endNeighbors] ++ concatMap (\n -> bfs' graph newVisited n endingCoords) nonEndNeighbors
+
+dijkstra' :: Graph -> PSQ.PSQ Coord (Int, Set.Set Coord) -> Set.Set Coord -> [Coord] -> (Coord, Int, Set.Set Coord)
+dijkstra' graph priorityQueue visited endingCoords =
     let Just (nextBinding, newPQ) = PSQ.minView priorityQueue
         currentCoord = PSQ.key nextBinding
         (currentCost, currentPath) = PSQ.prio nextBinding in
-    if currentCoord == endingCoord then (currentCost, currentPath)
-    else if currentCoord `Set.member` visited then (trace "already visited") dijkstra' graph newPQ visited endingCoord
+    if currentCoord `Set.member` visited then (trace "already visited") dijkstra' graph newPQ visited endingCoords
+    else if currentCoord `elem` endingCoords then (currentCoord, currentCost, currentPath)
     else
     let newVisited = Set.insert currentCoord visited
         neighbors = filter (`Set.notMember` currentPath) (graph Map.! currentCoord)
         -- now actually trying to find shortest path
         neighborsToInsert = map (\n -> (n, (currentCost + 1, Set.insert n currentPath))) neighbors
-        newPQWithNeighbors = foldl (\q (key, prio) -> PSQ.insert key prio q) newPQ neighborsToInsert in dijkstra' graph newPQWithNeighbors newVisited endingCoord
+        newPQWithNeighbors = foldl (\q (key, prio) -> PSQ.insert key prio q) newPQ neighborsToInsert in dijkstra' graph newPQWithNeighbors newVisited endingCoords
 
 parseSparseGraph :: [[Char]] -> [Coord] -> GraphWithCost
 parseSparseGraph chars additionalCoords =
     let junctions = findJunctions chars ++ additionalCoords
-        junctionPairs = pairs junctions
         dumbGraph = parseGraph chars
-        distances = map (\(c1,c2) -> ((c1,c2),(dijkstra' dumbGraph (PSQ.singleton c1 (0, Set.empty)) Set.empty c2))) junctionPairs
-        newGraph = foldl (\m ((c1,c2),(cost,v)) -> Map.insertWith (++) c2 [(c1,cost,(Set.delete c2 (Set.delete c1 v)))] (Map.insertWith (++) c1 [(c2,cost,(Set.delete c2 (Set.delete c1 v)))] m)) Map.empty distances in newGraph
+        distances = concatMap (\c -> map (\b -> (c,b)) (bfs' dumbGraph Set.empty c junctions)) junctions
+        newGraph = foldl (\m (c1,(c2,cost,v)) -> Map.insertWith (++) c2 [(c1,cost,(Set.delete c2 (Set.delete c1 v)))] (Map.insertWith (++) c1 [(c2,cost,(Set.delete c2 (Set.delete c1 v)))] m)) Map.empty distances in newGraph
 
 dfs' :: GraphWithCost -> Map.Map Coord Int -> Int -> Coord -> Coord -> [Int]
 dfs' graph visited currentLen currentCoord destination = --(trace $ show currentLen) $
     let lastCoord = currentCoord
-        neighbors = filter (\(c,cost,v) -> c /= currentCoord{- && c `Map.notMember` visited-}) (graph Map.! lastCoord)
+        neighbors = filter (\(c,cost,v) -> c /= currentCoord && c `Map.notMember` visited) (graph Map.! lastCoord)
         newVisited = Map.insertWith (+) currentCoord 1 visited in
-            (if currentCoord == destination && Map.size (Map.filter (> 1) newVisited) == 0 then (trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n") [currentLen] else []) ++
+            (if currentCoord == destination{- && Map.size (Map.filter (> 2) newVisited) == 0 -}then (trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n") [currentLen] else []) ++
             concatMap (\(coord,cost,v) -> dfs' graph (Map.unionWith (+) newVisited (Map.fromList (map (\c -> (c,1)) (Set.toList v)))) (currentLen+cost) coord destination) neighbors
 
 part2' lines =
@@ -173,12 +183,18 @@ part2' lines =
         maxStepsDijkstra = dijkstra graph (PSQ.singleton [start] (0, Set.empty)) Set.empty end
         junctions = findJunctions lines
         g2 = parseSparseGraph lines [start,end]
-        paths = dfs' g2 Map.empty 0 start end in do
+        paths = dfs' g2 Map.empty 0 start end
+         in do
         -- print maxStepsDijkstra
         -- print maxSteps
         -- note: junctions are [(9,15),(11,57),(15,33),(15,101),(17,77),(29,103),(31,5),(35,67),(37,37),(41,77),(41,133),(53,55),(55,109),(57,125),(59,89),(61,7),(67,43),(77,7),(77,39),(77,123),(79,63),(79,101),(83,81),(103,19),(105,85),(107,33),(107,133),(109,61),(111,107),(123,59),(123,107),(123,127),(125,81),(135,31)]
+        -- print junctions
+        -- print (Map.size g2)
+        -- print (length junctions)
         -- print (map (\(c1,others) -> map (\(c2,l,v) -> (c1,(c2,l,Set.size v))) others) (Map.toList g2))
         print paths
+        -- print (map (\j -> (bfs' graph Set.empty j junctions)) junctions)
+        -- print g2
 
 part2 = do
     lines <- getLines "day23/input.txt"
