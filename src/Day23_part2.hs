@@ -188,11 +188,6 @@ part2' lines =
         -- print maxStepsDijkstra
         -- print maxSteps
         -- note: junctions are [(9,15),(11,57),(15,33),(15,101),(17,77),(29,103),(31,5),(35,67),(37,37),(41,77),(41,133),(53,55),(55,109),(57,125),(59,89),(61,7),(67,43),(77,7),(77,39),(77,123),(79,63),(79,101),(83,81),(103,19),(105,85),(107,33),(107,133),(109,61),(111,107),(123,59),(123,107),(123,127),(125,81),(135,31)]
-        print junctions
-        -- print (Map.size g2)
-        -- print (length junctions)
-        -- print (map (\(c1,others) -> map (\(c2,l,v) -> (c1,(c2,l,Set.size v))) others) (Map.toList g2))
-        print $ Map.size g2
         print $ maximum paths
         -- print (map (\j -> (bfs' graph Set.empty j junctions)) junctions)
         -- print g2
