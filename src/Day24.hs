@@ -63,7 +63,7 @@ checkIntersection Hailstone { position = p1, velocity = v1 } Hailstone { positio
         matA_pinv = pinv matA
         vecX_times = matA_pinv Numeric.LinearAlgebra.<> vecB
         times = toList $ head $ toColumns vecX_times
-        in (trace $ show matA ++ " " ++ show vecB ++ " " ++ show vecX_times) $
+        in
         if not (all (>0) times) then Nothing
         else Just (getX p1 + (times !! 0) * getX v1, getY p1 + (times !! 0) * getY v1, getZ p1 + (times !! 0) * getZ v1)
 
@@ -74,11 +74,17 @@ pairs l = [(x,y) | (x:ys) <- tails l, y <- ys]
 zeroZ :: Hailstone -> Hailstone
 zeroZ Hailstone { position = (px,py,pz), velocity = (vx,vy,vz) } = Hailstone { position = (px,py,0), velocity = (vx,vy,0) }
 
+isWithin :: (Double,Double,Double) -> (Double,Double,Double) -> (Double,Double,Double) -> Bool
+isWithin (xmin, ymin, zmin) (xmax, ymax, zmax) (x,y,z) = xmin <= x && x <= xmax && ymin <= y && y <= ymax && zmin <= z && z <= zmax
+
 part1' lines =
     let stones = map (zeroZ . parseHailstone) lines
         allPairs = pairs stones
-        intersections = map (uncurry checkIntersection) allPairs in do
-            print intersections
+        intersections = mapMaybe (uncurry checkIntersection) allPairs
+        within = filter (isWithin (200000000000000,200000000000000,-(1/0)) (400000000000000,400000000000000,(1/0))) intersections in do
+            print (length within)
+
+-- 16728 too high :(
 
 part1 = do
     lines <- getLines "day24/input.txt"
