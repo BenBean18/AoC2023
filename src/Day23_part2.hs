@@ -138,7 +138,7 @@ dijkstra' graph priorityQueue visited endingCoord =
     let Just (nextBinding, newPQ) = PSQ.minView priorityQueue
         currentCoord = PSQ.key nextBinding
         (currentCost, currentPath) = PSQ.prio nextBinding in
-    if currentCoord == endingCoord then (currentCost, visited)
+    if currentCoord == endingCoord then (currentCost, currentPath)
     else if currentCoord `Set.member` visited then (trace "already visited") dijkstra' graph newPQ visited endingCoord
     else
     let newVisited = Set.insert currentCoord visited
@@ -160,7 +160,7 @@ dfs' graph visited currentLen currentCoord destination = --(trace $ show current
     let lastCoord = currentCoord
         neighbors = filter (\(c,cost,v) -> c /= currentCoord{- && c `Map.notMember` visited-}) (graph Map.! lastCoord)
         newVisited = Map.insertWith (+) currentCoord 1 visited in
-            (if currentCoord == destination && Map.size (Map.filter (> 3) newVisited) == 0 then (trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n") [currentLen] else []) ++
+            (if currentCoord == destination && Map.size (Map.filter (> 1) newVisited) == 0 then (trace $ show currentLen ++ " " ++ show (Map.elems newVisited) ++ "\n") [currentLen] else []) ++
             concatMap (\(coord,cost,v) -> dfs' graph (Map.unionWith (+) newVisited (Map.fromList (map (\c -> (c,1)) (Set.toList v)))) (currentLen+cost) coord destination) neighbors
 
 part2' lines =
@@ -177,7 +177,7 @@ part2' lines =
         -- print maxStepsDijkstra
         -- print maxSteps
         -- note: junctions are [(9,15),(11,57),(15,33),(15,101),(17,77),(29,103),(31,5),(35,67),(37,37),(41,77),(41,133),(53,55),(55,109),(57,125),(59,89),(61,7),(67,43),(77,7),(77,39),(77,123),(79,63),(79,101),(83,81),(103,19),(105,85),(107,33),(107,133),(109,61),(111,107),(123,59),(123,107),(123,127),(125,81),(135,31)]
-        -- print g2
+        -- print (map (\(c1,others) -> map (\(c2,l,v) -> (c1,(c2,l,Set.size v))) others) (Map.toList g2))
         print paths
 
 part2 = do
