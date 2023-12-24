@@ -24,11 +24,14 @@ import Numeric.LinearAlgebra
 
 data Hailstone = Hailstone { position :: (Double,Double,Double), velocity :: (Double,Double,Double) } deriving (Eq, Ord, Show)
 
+scaleFactor :: Double
+scaleFactor = 100000000000
+
 parseHailstone :: String -> Hailstone
 parseHailstone str =
     let [pos,vel] = splitOn "@" str
-        posXYZ = map (\s -> read s :: Double) (splitOn "," pos)
-        velXYZ = map (\s -> read s :: Double) (splitOn "," vel) in Hailstone { position = (posXYZ !! 0, posXYZ !! 1, posXYZ !! 2), velocity = (velXYZ !! 0, velXYZ !! 1, velXYZ !! 2) }
+        posXYZ = map (\s -> (read s :: Double) / scaleFactor) (splitOn "," pos)
+        velXYZ = map (\s -> (read s :: Double) / scaleFactor) (splitOn "," vel) in Hailstone { position = (posXYZ !! 0, posXYZ !! 1, posXYZ !! 2), velocity = (velXYZ !! 0, velXYZ !! 1, velXYZ !! 2) }
 
 {-
 (ignoring Z for part 1)
@@ -78,13 +81,16 @@ isWithin :: (Double,Double,Double) -> (Double,Double,Double) -> (Double,Double,D
 isWithin (xmin, ymin, zmin) (xmax, ymax, zmax) (x,y,z) = xmin <= x && x <= xmax && ymin <= y && y <= ymax && zmin <= z && z <= zmax
 
 part1' lines =
-    let stones = map (zeroZ . parseHailstone) lines
+    let stones = map (\Hailstone { position = (x,y,z), velocity = v} -> Hailstone { position = (x - 200000000000000 / scaleFactor, y - 200000000000000 / scaleFactor, z), velocity = v }) $ map (zeroZ . parseHailstone) lines
         allPairs = pairs stones
         intersections = mapMaybe (uncurry checkIntersection) allPairs
-        within = filter (isWithin (200000000000000,200000000000000,-(1/0)) (400000000000000,400000000000000,(1/0))) intersections in do
+        within = filter (isWithin (0,0,-(1/0)) ((400000000000000-200000000000000) / scaleFactor,(400000000000000-200000000000000) / scaleFactor,(1/0))) intersections in do
+            -- print within
             print (length within)
 
 -- 16728 too high :(
+-- I think I'm being gotten by float precision, scaled down and got that minus one /shrug
+-- trying 16727
 
 part1 = do
     lines <- getLines "day24/input.txt"
