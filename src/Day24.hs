@@ -90,14 +90,55 @@ part1' lines =
 
 -- 16728 too high :(
 -- I think I'm being gotten by float precision, scaled down and got that minus one /shrug
--- trying 16727
+-- trying 16727 (spoiler: that was correct)
 
 part1 = do
     lines <- getLines "day24/input.txt"
     part1' lines
 
 -- Part 2
-part2' lines = print "Hi"
+
+-- Find the position and velocity such that a rock thrown from there will intersect every other hailstone's path
+-- (times have to align as well)
+-- I think I'm *very* well set up to solve this
+
+{-
+x,  y,  z  @ vx, vy, vz
+19, 13, 30 @ -2, 1, -2
+
+x + (t1)vx = 19 + (t1)(-2)
+y + (t1)vy = 13 + (t1)(1)
+z + (t1)vz = 30 + (t1)(-2)
+
+-}
+
+{-
+so i've figured out that for a (position,velocity) pair ((a,b,c),(d,e,f)) to intersect for example 19, 13, 30 @ -2, 1, -2:
+Divide[a-19,d+2]=Divide[b-13,e-1]=Divide[c-30,f+2]
+-}
+
+constraint :: Hailstone -> String
+constraint Hailstone { position = (a,b,c), velocity = (d,e,f) } = "Divide[a-" ++ show (round (a * scaleFactor)) ++ ",d-" ++ show (round (d * scaleFactor)) ++ "]=Divide[b-" ++ show (round (b * scaleFactor)) ++ ",e-" ++ show (round (e * scaleFactor)) ++ "]=Divide[c-"++ show (round (c * scaleFactor)) ++",f-"++ show (round (f * scaleFactor)) ++"]"
+
+-- For our thrown rock to hit three hailstones, the velocities from (1-2) and (2-3) must be equal.
+-- First, we'll make a helper function to create an expression for the velocity between two hailstones (one line segment):
+velocityBetween :: (Hailstone,Int) -> (Hailstone,Int) -> String
+velocityBetween (Hailstone { position = (x1,y1,z1), velocity = (vx1,vy1,vz1) },i1) (Hailstone { position = (x2,y2,z2), velocity = (vx2,vy2,vz2) },i2) =
+    let velocityFrom1To2 = "Divide[{{" ++ show (round (x2 * scaleFactor)) ++ "},{" ++ show (round (y2 * scaleFactor)) ++ "},{" ++ show (round (z2 * scaleFactor)) ++ "}}+Subscript[t,"++show i2++"]{{" ++ show (round (vx2 * scaleFactor)) ++ "},{" ++ show (round (vy2 * scaleFactor)) ++ "},{" ++ show (round (vz2 * scaleFactor)) ++ "}}-\\(40){{" ++ show (round (x1 * scaleFactor)) ++ "},{" ++ show (round (y1 * scaleFactor)) ++ "},{" ++ show (round (z1 * scaleFactor)) ++ "}}+Subscript[t,"++show i1++"]{{" ++ show (round (vx1 * scaleFactor)) ++ "},{" ++ show (round (vy1 * scaleFactor)) ++ "},{" ++ show (round (vz1 * scaleFactor)) ++ "}}\\(41),Subscript[t,"++show i2++"]-Subscript[t,"++show i1++"]]" in velocityFrom1To2
+
+
+
+-- Divide[{{18},{19},{22}}+Subscript[t,2]{{-1},{-1},{-2}}-\(40){{19},{13},{30}}+Subscript[t,1]{{-2},{1},{-2}}\(41),Subscript[t,2]-Subscript[t,1]]=Divide[{{20},{25},{34}}+Subscript[t,3]{{-2},{-2},{-4}}-\(40){{18},{19},{22}}+Subscript[t,2]{{-1},{-1},{-2}}\(41),Subscript[t,3]-Subscript[t,2]]
+-- Divide[{{x2},{y2},{z2}}+Subscript[t,2]{{vx2},{vy2},{vz2}}-\(40){{x1},{y1},{z1}}+Subscript[t,1]{{vx1},{vy1},{vz1}}\(41),Subscript[t,2]-Subscript[t,1]]
+
+-- ok this is kind of cheating but i can't figure out for the life of me how to get this into a matrix equation form to solve myself
+generateMathematicaQuery :: [Hailstone] -> String
+generateMathematicaQuery stones =
+    let stonePairs = pairs (zip stones [0..length stones-1])
+        constraints = map (uncurry velocityBetween) stonePairs in init (foldl (\str constraint -> str ++ constraint ++ "=") "Solve [" constraints) ++ "]"
+
+part2' lines =
+    putStrLn $ generateMathematicaQuery (map parseHailstone lines)
 
 part2 = do
     lines <- getLines "day24/input.txt"
