@@ -54,42 +54,11 @@ charAt charList (x,y) = charList !! y !! x
 inBounds :: [String] -> Coord -> Bool
 inBounds charList (xc,yc) = not (xc < 0 || yc < 0 || xc >= length (head charList) || yc >= length charList)
 
-{-# NOINLINE memo #-}
-memo :: IORef (Map.Map Coord Bool)
-memo = unsafePerformIO (newIORef mempty)
-
 canGo :: [String] -> Coord -> Bool
-canGo lines c_ = unsafePerformIO $ do
-    let c = c_ `modCoord` (length (head lines), length lines)
-    memoMap <- readIORef memo
-    let current = Map.lookup c memoMap
-    if isNothing current then do
-        let val = canGo' lines c
-        let newMap = Map.insert c val memoMap
-        writeIORef memo newMap
-        return val
-    else return (fromJust current)
-
-canGo' :: [String] -> Coord -> Bool
-canGo' chars c = charAt chars c /= '#'
-
-{-# NOINLINE neighMemo #-}
-neighMemo :: IORef (Map.Map Coord [Coord])
-neighMemo = unsafePerformIO (newIORef mempty)
+canGo chars c = charAt chars (c `modCoord` (131,131)) /= '#'
 
 neighboringCoords :: [String] -> Coord -> [Coord]
-neighboringCoords lines c = unsafePerformIO $ do
-    memoMap <- readIORef neighMemo
-    let current = Map.lookup c memoMap
-    if isNothing current then do
-        let val = neighboringCoords' lines c
-        let newMap = Map.insert c val memoMap
-        writeIORef neighMemo newMap
-        return val
-    else return (fromJust current)
-
-neighboringCoords' :: [String] -> Coord -> [Coord]
-neighboringCoords' chars c =
+neighboringCoords chars c =
     let allDirs = {-filter (inBounds chars) -}(map (c `add`) [(0,1),(0,-1),(1,0),(-1,0)]) in filter (canGo chars) allDirs
 
 findStart :: [String] -> Int -> Coord
@@ -104,50 +73,63 @@ findNumReachable lines currentCoords stepsLeft =
         newList = concatMap (neighboringCoords lines) currentList in findNumReachable lines (Set.fromList newList) (stepsLeft - 1)
 
 -- Part 2
--- ... ok so 26501365 must be significant in some way
--- probably, it just seems so random
--- prime factorization according to wolfram alpha: 5×11×481843
--- with the infinite grid, we can just do modulo on the indices to check if a value is in bounds
--- maybe this is core to how you do it?
-
--- can we instead of a Set do a Map.Map Coord Int (to store the # of occurrences)?
--- but then how do we see if a coordinate has been visited twice?
--- could try Set.Set (Coord, Coord) where the first coordinate is the position in the map and the second coordinate is the position OF the map (on the infinite grid)
--- but then we are still storing the same number of things
-
--- will be degree [length of the vector] - 1 since that works
 designMatrix :: (Numeric t) => [t] -> Matrix t
 designMatrix xValues =
-    let columns = map (\exp -> map (^ exp) xValues) [0..10] in
+    let columns = map (\exp -> map (^ exp) xValues) [0..2] in
         fromColumns (map fromList columns)
 
 -- Y = Xb
 -- or... X_pseudoinverse * Y = b
 -- parameters: x, y, best fit parameters
-linearRegression :: (Numeric t, Field t, Show t) => [t] -> [t] -> (t -> t)
+linearRegression :: [Double] -> [Double] -> (Int -> Int)
 linearRegression x y =
     let mX = designMatrix x
         vY = fromList y
         mX_pseudoinverse = pinv mX
         vBeta = mX_pseudoinverse #> vY
-        beta = toList vBeta in (trace $ show (toColumns mX)) (applyPolynomial beta)
+        beta = toList vBeta in (trace $ show mX ++ " " ++ show vBeta) (applyPolynomial beta)
 
-applyPolynomial :: (Numeric t, Show t) => [t] -> t -> t
-applyPolynomial beta x = sum (map (\i -> {-(trace $ show (beta !! i) ++ " " ++ show i ++ " " ++ show x ++ " " ++ show ((beta !! i) * (x ^ i)))-} ((beta !! i) * (x ^ i))) [0..length beta-1])
+applyPolynomial :: [Double] -> Int -> Int
+applyPolynomial beta x = sum (map (\i -> (round (beta !! i) * (x ^ i))) [0..length beta-1])
+-- ... ok so 26501365 must be significant in some way
+-- it's 202300 * 131 + 65 (had to look at reddit for this one, i was very stuck)
 
-findReachableList :: [String] -> [(Int, Set.Set Coord)] -> Int -> [(Int, Set.Set Coord)]
-findReachableList lines currentSets 0 = currentSets
-findReachableList lines currentSets nLeft =
-    let (lastI, lastEvaluated) = head currentSets
-        newSets = (lastI + 1, findNumReachable lines lastEvaluated 1) : currentSets in findReachableList lines newSets (nLeft-1)
+-- note: each square can only be reached in either an even OR odd number of steps
+-- why? we can definitely prove that starting with even or odd, you can use any even or odd path above that (since you can move 1 away from start then back = +2 which doesn't change parity)
+
+makeColorful :: String -> String
+makeColorful s = "\x1b[94m" ++ s ++ "\x1b[0m"
+
+visualizeCoordinateSet' :: [Coord] -> [[Char]] -> Int -> [[Char]]
+visualizeCoordinateSet' coords strings yCoord = if yCoord == 394+131 then strings else
+    let xCoordsOnThisLine = map fst $ filter (\(x,y) -> y == yCoord) coords
+        -- we probably only need to visualize nine (131x131) tiles
+        -- that's 393x393
+        -- so -197..197 on both x and y
+        thisLine = concatMap (\x -> (if x `mod` 131 == 0 || yCoord `mod` 131 == 0 then makeColorful else id) (if x `elem` xCoordsOnThisLine then "O" else ".")) [-262-131..393+131] in visualizeCoordinateSet' coords (strings ++ [thisLine]) (yCoord + 1)
+
+visualizeCoordinateSet :: [Coord] -> [[Char]]
+visualizeCoordinateSet coords = visualizeCoordinateSet' coords [[]] (-262-131)
 
 part2' :: [String] -> IO ()
 part2' lines =
     let startCoord = findStart lines 0
-        ir = foldl (\sets _ -> (trace $ show (length sets - 1) ++ "," ++ show (Set.size (head sets))) (findNumReachable lines (head sets) 1) : sets) [Set.singleton startCoord] [0..1000] in do
+        reachable = map (findNumReachable lines (Set.singleton startCoord)) [65+131*0,65+131*1,65+131*2,65+131*3]
+        -- note: steps = 65 + 131x, and the y axis is the number of squares reached
+        (xs,ys) = (map (\x -> fromIntegral x :: Double) [0,1,2,3], map (fromIntegral . Set.size) reachable)
+        poly = linearRegression xs ys
+        -- for verification:
+        next = findNumReachable lines (Set.singleton startCoord) (65+131*4) in do
+        putStrLn $ show (poly 4) ++ "=="
+        putStrLn $ show (Set.size next) ++ " for this to be correct"
+        putStrLn $ "Solution: " ++ show (poly ((26501365 - 65) `div` 131))
         -- print reachable
-        print (head ir)
-        mapM_ (\(i,r) -> putStrLn $ show i ++ "," ++ show (Set.size r)) (zip [0..1000] ir)
+        -- print $ Set.size reachable
+        -- visualization:
+        -- putStrLn $ concatMap (\(r,i) -> show i ++ unlines (visualizeCoordinateSet (Set.toList r))) (zip reachable [65,196,327,458])
+
+-- 79667628050727568 too high, maybe floating point stuff
+
 
 part2 = do
     lines <- getLines "day21/input.txt"
