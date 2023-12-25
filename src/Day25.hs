@@ -48,7 +48,9 @@ edges :: Graph -> [(String, String)]
 edges = id
 
 nodes :: Graph -> [String]
-nodes g = nub $ concatMap (\c -> [uncurry min c, uncurry max c]) (edges g)
+nodes g = nub $ concatMap (\(a,b)->[a,b]) (edges g)
+
+-- ...wait the brute forcer finished????????
 
 -- https://stackoverflow.com/a/25923941
 atRandIndex :: [a] -> Int -> a
@@ -57,11 +59,11 @@ atRandIndex l int = unsafePerformIO $ do
     return $ l !! ((i + int) `mod` (length l))
 
 karger :: Graph -> Int -> [(String, String)]
-karger g i = (trace $ show (numEdgesLeft g)) $ if length (nodes g) == 2 && length (edges g) == 3 then edges g else
+karger g i = {-(trace $ show (numEdgesLeft g)) $ -}if length (edges g) == 3 then edges g else
     if length (edges g) > 0 then
         let edge = atRandIndex (edges g) i
             newGraph = uncurry (contractEdge g) edge in {-(trace $ "removing " ++ show edge)-} karger newGraph i
-    else (if length (nodes g) == 2 && length (edges g) == 3 then edges g else {-(trace $ show g)-} [])
+    else (if length (edges g) == 3 then edges g else {-(trace $ show g)-} [])
 
 -- the three edges to cut will likely be the most visited ones when pathing from any node to any other node
 
