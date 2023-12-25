@@ -19,6 +19,8 @@ import Data.List.Unique (allUnique)
 
 import Numeric.LinearAlgebra
 
+import qualified Network.URI.Encode as URIEncode
+
 -- Part 1
 -- Each intersection can be set up as a system of equations and solved using linear algebra
 
@@ -117,16 +119,19 @@ so i've figured out that for a (position,velocity) pair ((a,b,c),(d,e,f)) to int
 Divide[a-19,d+2]=Divide[b-13,e-1]=Divide[c-30,f+2]
 -}
 
+scaleTuple (x,y,z) s = (x*s,y*s,z*s)
+
+roundTuple :: (Double,Double,Double) -> (Int,Int,Int)
+roundTuple (x,y,z) = (round x, round y, round z)
+
 constraint :: Hailstone -> String
 constraint Hailstone { position = (a,b,c), velocity = (d,e,f) } = "Divide[a-" ++ show (round (a * scaleFactor)) ++ ",d-" ++ show (round (d * scaleFactor)) ++ "]=Divide[b-" ++ show (round (b * scaleFactor)) ++ ",e-" ++ show (round (e * scaleFactor)) ++ "]=Divide[c-"++ show (round (c * scaleFactor)) ++",f-"++ show (round (f * scaleFactor)) ++"]"
 
 -- For our thrown rock to hit three hailstones, the velocities from (1-2) and (2-3) must be equal.
 -- First, we'll make a helper function to create an expression for the velocity between two hailstones (one line segment):
-velocityBetween :: (Hailstone,Int) -> (Hailstone,Int) -> String
-velocityBetween (Hailstone { position = (x1,y1,z1), velocity = (vx1,vy1,vz1) },i1) (Hailstone { position = (x2,y2,z2), velocity = (vx2,vy2,vz2) },i2) =
+velocityBetweenExpression :: (Hailstone,Int) -> (Hailstone,Int) -> String
+velocityBetweenExpression (Hailstone { position = (x1,y1,z1), velocity = (vx1,vy1,vz1) },i1) (Hailstone { position = (x2,y2,z2), velocity = (vx2,vy2,vz2) },i2) =
     let velocityFrom1To2 = "Divide[{{" ++ show (round (x2 * scaleFactor)) ++ "},{" ++ show (round (y2 * scaleFactor)) ++ "},{" ++ show (round (z2 * scaleFactor)) ++ "}}+Subscript[t,"++show i2++"]{{" ++ show (round (vx2 * scaleFactor)) ++ "},{" ++ show (round (vy2 * scaleFactor)) ++ "},{" ++ show (round (vz2 * scaleFactor)) ++ "}}-\\(40){{" ++ show (round (x1 * scaleFactor)) ++ "},{" ++ show (round (y1 * scaleFactor)) ++ "},{" ++ show (round (z1 * scaleFactor)) ++ "}}+Subscript[t,"++show i1++"]{{" ++ show (round (vx1 * scaleFactor)) ++ "},{" ++ show (round (vy1 * scaleFactor)) ++ "},{" ++ show (round (vz1 * scaleFactor)) ++ "}}\\(41),Subscript[t,"++show i2++"]-Subscript[t,"++show i1++"]]" in velocityFrom1To2
-
-
 
 -- Divide[{{18},{19},{22}}+Subscript[t,2]{{-1},{-1},{-2}}-\(40){{19},{13},{30}}+Subscript[t,1]{{-2},{1},{-2}}\(41),Subscript[t,2]-Subscript[t,1]]=Divide[{{20},{25},{34}}+Subscript[t,3]{{-2},{-2},{-4}}-\(40){{18},{19},{22}}+Subscript[t,2]{{-1},{-1},{-2}}\(41),Subscript[t,3]-Subscript[t,2]]
 -- Divide[{{x2},{y2},{z2}}+Subscript[t,2]{{vx2},{vy2},{vz2}}-\(40){{x1},{y1},{z1}}+Subscript[t,1]{{vx1},{vy1},{vz1}}\(41),Subscript[t,2]-Subscript[t,1]]
@@ -135,10 +140,41 @@ velocityBetween (Hailstone { position = (x1,y1,z1), velocity = (vx1,vy1,vz1) },i
 generateMathematicaQuery :: [Hailstone] -> String
 generateMathematicaQuery stones =
     let stonePairs = pairs (zip stones [0..length stones-1])
-        constraints = map (uncurry velocityBetween) stonePairs in init (foldl (\str constraint -> str ++ constraint ++ "=") "Solve [" constraints) ++ "]"
+        constraints = map (uncurry velocityBetweenExpression) stonePairs in URIEncode.encode (init (foldl (\str constraint -> str ++ constraint ++ "=") "Solve [" constraints) ++ "]")
+
+positionAt :: Hailstone -> Double -> (Double, Double, Double)
+positionAt Hailstone { position = (x,y,z), velocity = (vx,vy,vz) } timeElapsed = (x + vx * timeElapsed, y + vy * timeElapsed, z + vz * timeElapsed)
+
+-- Once we use WolframAlpha to solve for the times it collides with each of three hailstones, we can then find the initial position and velocity
+-- Let hailstone i have position p_i (= initial position + t_i * velocity) at time t_i. To find the velocity between hailstones 0 and 1,
+-- velocity = displacement / time = (p_1 - p_0) / (t_1 - t_0)
+findVelocityBetween :: (Hailstone, Double) -> (Hailstone, Double) -> (Double, Double, Double)
+findVelocityBetween (h0, t0) (h1, t1) =
+    let p0 = positionAt h0 t0
+        p1 = positionAt h1 t1
+    in ((getX p1 - getX p0) / (t1-t0), (getY p1 - getY p0) / (t1-t0), (getZ p1 - getZ p0) / (t1-t0))
 
 part2' lines =
-    putStrLn $ generateMathematicaQuery (map parseHailstone lines)
+    let stones = map parseHailstone lines
+        firstThree = take 3 stones -- 3 should be enough to find the unique throw, if it's not will have to find an alternate strategy
+    in do
+    putStrLn $ "Go to https://www.wolframalpha.com/input?i2d=true&i=" ++ generateMathematicaQuery firstThree
+    putStrLn "What is t0 equal to?"
+    t0Str <- getLine
+    let t0 = read t0Str :: Double
+    putStrLn "What is t1 equal to?"
+    t1Str <- getLine
+    let t1 = read t1Str :: Double
+    -- Find the velocity of our rock
+    let rockVelocity_ = findVelocityBetween (stones !! 0, t0) (stones !! 1, t1)
+    -- Find its position by starting at the collision with hailstone 0 and going forward -t0 (aka going backwards t0) steps in time
+    let rockPosition_ = positionAt (Hailstone { position = positionAt (stones !! 0) t0, velocity = rockVelocity_ }) (-t0)
+    -- scale back up
+    let rockVelocity = roundTuple $ scaleTuple rockVelocity_ scaleFactor
+    let rockPosition = roundTuple $ scaleTuple rockPosition_ scaleFactor
+    -- we could verify the solution but this should be good for now
+    putStrLn $ "The rock with initial position " ++ show rockPosition ++ " and velocity " ++ show rockVelocity ++ " collides with *all* of the hailstones!"
+    putStrLn $ "Solution: " ++ show (getX rockPosition + getY rockPosition + getZ rockPosition)
 
 part2 = do
     lines <- getLines "day24/input.txt"
