@@ -1,4 +1,4 @@
-module Day25 where
+module Day25_old where
 
 import Utilities
 import Data.List.Split
@@ -22,30 +22,31 @@ import GHC.IO.Unsafe
 
 import Data.List.Unique (allUnique, uniq)
 
--- Karger's algorithm cares about edges, so uding adjacency lists is bad
--- Store the graph as a list of edges instead
-type Graph = [(String, String)]
+type Graph = Map.Map String [String]
+
+type Graph2 = Set.Set (String, String)
 
 -- Use Karger's algorithm to find the min-cut
 -- Stop once a cut with 3 edges is found
 
 contractEdge :: Graph -> String -> String -> Graph
-contractEdge g a_ b_ = 
-    let e = (min a_ b_, max a_ b_)
-        newNode = a_ ++ b_
-        deleted = removeEdge g a_ b_
-        replaced = map (\(a,b) -> if (min a b) == a_ || (min a b) == b_ then (min newNode (max a b), max newNode (max a b)) else if (max a b) == a_ || (max a b) == b_ then (min (min a b) newNode, max (min a b) newNode) else (a,b)) deleted in
+contractEdge g a b = 
+    let newNode = a ++ b
+        oldConnected = filter (\s -> s /= a && s /= b) $ ((Map.findWithDefault [] b g) ++ (Map.findWithDefault [] a g))
+        deleted = Map.delete b (Map.delete a g)
+        new = Map.insert newNode oldConnected deleted
+        replaced = Map.map (\strs -> map (\s -> if s == a || s == b then newNode else s) strs) new in
         replaced
 
 removeEdge :: Graph -> String -> String -> Graph
-removeEdge g a_ b_ =
-    let deleted = filter (/= (min a_ b_, max a_ b_)) g in deleted
+removeEdge g a b =
+    let deleted = Map.delete b (Map.delete a g) in deleted
 
 numEdgesLeft :: Graph -> Int
-numEdgesLeft g = length g
+numEdgesLeft g = sum $ Map.map length g
 
 edges :: Graph -> [(String, String)]
-edges = id
+edges g = concat $ Map.mapWithKey (\k v -> map (\a -> (uncurry min (k,a), uncurry max (k,a))) v) g
 
 nodes :: Graph -> [String]
 nodes g = nub $ concatMap (\c -> [uncurry min c, uncurry max c]) (edges g)
@@ -57,7 +58,7 @@ atRandIndex l int = unsafePerformIO $ do
     return $ l !! ((i + int) `mod` (length l))
 
 karger :: Graph -> Int -> [(String, String)]
-karger g i = (trace $ show (numEdgesLeft g)) $ if length (nodes g) == 2 && length (edges g) == 3 then edges g else
+karger g i = if length (nodes g) == 2 && length (edges g) == 3 then edges g else
     if length (edges g) > 0 then
         let edge = atRandIndex (edges g) i
             newGraph = uncurry (contractEdge g) edge in {-(trace $ "removing " ++ show edge)-} karger newGraph i
@@ -75,10 +76,10 @@ e: f g
 parseLine :: Graph -> String -> Graph
 parseLine g s =
     let [a,bs_] = splitOn ": " s
-        bs = splitOn " " bs_ in foldl (\graph b -> graph ++ [(min a b, max a b)]) g bs
+        bs = splitOn " " bs_ in foldl (\graph b -> Map.insert a (b:(Map.findWithDefault [] a graph)) graph) g bs
 
 parseLines :: [String] -> Graph
-parseLines = foldl parseLine []
+parseLines = foldl parseLine Map.empty
 
 findValid :: Graph -> Int -> Int
 findValid g i = (trace $ show i) $ 
@@ -90,10 +91,10 @@ part1' lines =
         cuts = filter (/= []) $ map (karger graph) [0..100] in do
             -- print graph
             -- print $ foldl (\g e -> foldl (\gr (ar, br) -> contractEdge gr ar br) g (filter (/= e) (edges g))) graph [("hfx","pzl"), ("bvb","cmg"), ("nvd","jqt")]
-            -- print $ contractEdge (contractEdge (contractEdge graph "e" "f") "d" "ef") "def" "g"
+            -- print $ contractEdge (contractEdge (contractEdge graph "hfx" "pzl") "bvb" "cmg") "nvd" "jqt"
             print $ findValid graph 0
             -- print $ graph
-            -- print $ contractEdge graph "e" "f"
+            -- print $ contractEdge graph "b" "c"
             -- print (map (\(a,b) -> map (\s -> length s `div` 3) [a,b]) cut)
 
 -- MAYBE [3021, 1482]
